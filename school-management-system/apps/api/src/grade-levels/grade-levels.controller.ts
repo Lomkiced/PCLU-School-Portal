@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { GradeLevelsService } from './grade-levels.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Role, SchoolLevel } from '@sms/database';
+import { SchoolLevel } from '@sms/database';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -24,6 +24,14 @@ export class GradeLevelsController {
         return {
             success: true,
             data: await this.gradeLevelsService.findAll(),
+        };
+    }
+
+    @Get(':id')
+    async findOne(@Param('id') id: string) {
+        return {
+            success: true,
+            data: await this.gradeLevelsService.findOne(id),
         };
     }
 }

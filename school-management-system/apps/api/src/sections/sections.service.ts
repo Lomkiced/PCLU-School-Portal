@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -12,21 +12,33 @@ export class SectionsService {
     async findAll(gradeLevelId?: string) {
         return this.prisma.section.findMany({
             where: gradeLevelId ? { gradeLevelId } : undefined,
-            include: { adviser: true, room: true, gradeLevel: true }
+            include: {
+                adviser: true,
+                room: true,
+                gradeLevel: true,
+                _count: { select: { students: true } },
+            },
+            orderBy: { name: 'asc' },
         });
     }
 
     async findOne(id: string) {
-        return this.prisma.section.findUnique({
+        const section = await this.prisma.section.findUnique({
             where: { id },
             include: {
                 adviser: true,
                 room: true,
                 gradeLevel: true,
                 students: {
-                    include: { attendance: true, user: true }
-                }
-            }
+                    include: {
+                        user: { select: { email: true, profilePicture: true } },
+                    },
+                    orderBy: { lastName: 'asc' },
+                },
+                _count: { select: { students: true } },
+            },
         });
+        if (!section) throw new NotFoundException('Section not found');
+        return section;
     }
 }

@@ -18,12 +18,14 @@ import {
     LogOut,
     ChevronLeft,
     Menu,
+    School,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const adminNavItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Students", href: "/admin/students", icon: GraduationCap },
+    { label: "Classes", href: "/admin/classes", icon: School },
     { label: "Faculty", href: "/admin/faculty", icon: Users },
     { label: "Subjects", href: "/admin/subjects", icon: BookOpen },
     { label: "Timetable", href: "/admin/timetable", icon: Calendar },
