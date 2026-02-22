@@ -1,101 +1,150 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Role, EnrollmentStatus } from '@sms/database';
+import { EnrollmentStatus } from '@sms/database';
 import * as bcrypt from 'bcryptjs';
-import { FileUploadService } from '../file-upload/file-upload.service';
-import { IdGeneratorService } from '../id-generator/id-generator.service';
-import { format } from 'date-fns';
 
 @Injectable()
 export class StudentsService {
-    constructor(
-        private prisma: PrismaService,
-        private fileUpload: FileUploadService,
-        private idGenerator: IdGeneratorService,
-    ) { }
+    constructor(private prisma: PrismaService) { }
 
-    async createStudent(data: any) {
+    /**
+     * Creates a Student + User + Parent in a single Prisma transaction.
+     * Default password: "student123" (bcrypt hashed).
+     */
+    async createStudentWithParent(data: {
+        student: { firstName: string; lastName: string; email: string };
+        parent: { firstName: string; lastName: string; occupation: string };
+    }) {
+        // Check for duplicate email
+        const existingUser = await this.prisma.user.findUnique({
+            where: { email: data.student.email },
+        });
+        if (existingUser) {
+            throw new ConflictException('A user with this email already exists');
+        }
+
+        const defaultPassword = 'student123';
+        const passwordHash = await bcrypt.hash(defaultPassword, 10);
+
+        // Generate a student ID: YYYY-NEW-XXX
         const year = new Date().getFullYear();
-        const gradeString = await this.getGradeLevelString(data.gradeLevelId);
-
         const count = await this.prisma.studentProfile.count({
-            where: {
-                studentId: { startsWith: `${year}-${gradeString}-` }
-            }
+            where: { studentId: { startsWith: `${year}-` } },
         });
         const sequence = (count + 1).toString().padStart(3, '0');
-        const studentId = `${year}-${gradeString}-${sequence}`;
+        const studentId = `${year}-NEW-${sequence}`;
 
-        const tempPassword = format(new Date(data.birthdate), 'MMddyyyy');
-        const passwordHash = await bcrypt.hash(tempPassword, 10);
-
-        const qrBuffer = await this.idGenerator.generateQRCode(studentId);
-        const qrFileName = `qrcodes/${studentId}.png`;
-        await this.fileUpload.uploadFile(qrBuffer, qrFileName, 'image/png');
-
-        const result = await this.prisma.$transaction(async (tx) => {
+        return this.prisma.$transaction(async (tx) => {
+            // 1. Create the Student's User + Profile
             const user = await tx.user.create({
                 data: {
-                    email: data.email || `${studentId}@school.edu`,
+                    email: data.student.email,
                     passwordHash,
                     role: 'STUDENT',
-                    profilePicture: data.profilePictureUrl,
+                    isFirstLogin: true,
                     studentProfile: {
                         create: {
                             studentId,
-                            firstName: data.firstName,
-                            lastName: data.lastName,
-                            middleName: data.middleName,
-                            birthdate: new Date(data.birthdate),
-                            gender: data.gender,
-                            address: data.address,
-                            guardianName: data.guardianName,
-                            guardianRelation: data.guardianRelation,
-                            guardianContact: data.guardianContact,
-                            guardianEmail: data.guardianEmail,
-                            qrCodeUrl: qrFileName,
-                            enrollmentStatus: EnrollmentStatus.ENROLLED,
-                            gradeLevelId: data.gradeLevelId,
-                            sectionId: data.sectionId,
-                        }
+                            firstName: data.student.firstName,
+                            lastName: data.student.lastName,
+                            birthdate: new Date('2000-01-01'), // Placeholder
+                            gender: 'N/A',
+                            address: 'N/A',
+                            guardianName: `${data.parent.firstName} ${data.parent.lastName}`,
+                            guardianRelation: data.parent.occupation,
+                            guardianContact: 'N/A',
+                            enrollmentStatus: EnrollmentStatus.PENDING,
+                        },
                     },
-                    credential: {
-                        create: {
-                            username: studentId,
-                            plainPassword: tempPassword
-                        }
-                    }
                 },
-                include: { studentProfile: true, credential: true }
+                include: { studentProfile: true },
             });
 
-            const assignments = await tx.teacherAssignment.findMany({
-                where: { sectionId: data.sectionId, academicYearId: data.academicYearId },
-                select: { subjectId: true }
+            // 2. Create the Parent's User + Profile, linked to this student
+            const parentPasswordHash = await bcrypt.hash('parent123', 10);
+            const parentEmail = `parent.${data.student.email}`;
+
+            await tx.user.create({
+                data: {
+                    email: parentEmail,
+                    passwordHash: parentPasswordHash,
+                    role: 'PARENT',
+                    isFirstLogin: true,
+                    parentProfile: {
+                        create: {
+                            firstName: data.parent.firstName,
+                            lastName: data.parent.lastName,
+                            contactNumber: 'N/A',
+                            students: {
+                                connect: [{ id: user.studentProfile!.id }],
+                            },
+                        },
+                    },
+                },
             });
-
-            const enrollments = assignments.map(a => ({
-                studentId: user.studentProfile!.id,
-                subjectId: a.subjectId,
-                sectionId: data.sectionId,
-                academicYearId: data.academicYearId,
-            }));
-
-            if (enrollments.length > 0) {
-                await tx.subjectEnrollment.createMany({ data: enrollments });
-            }
 
             return user;
         });
-
-        return result;
     }
 
-    private async getGradeLevelString(gradeLevelId: string) {
-        const level = await this.prisma.gradeLevel.findUnique({ where: { id: gradeLevelId } });
-        if (!level) return 'X';
-        // Clean string to get grade identifier
-        return level.name.replace(/\D/g, '') || level.name.substring(0, 1).toUpperCase();
+    /**
+     * Returns enrolled students (those with a sectionId and ENROLLED status).
+     */
+    async findEnrolled(params: { search?: string }) {
+        return this.prisma.studentProfile.findMany({
+            where: {
+                enrollmentStatus: EnrollmentStatus.ENROLLED,
+                sectionId: { not: null },
+                ...(params.search
+                    ? {
+                        OR: [
+                            { firstName: { contains: params.search, mode: 'insensitive' as const } },
+                            { lastName: { contains: params.search, mode: 'insensitive' as const } },
+                            { studentId: { contains: params.search, mode: 'insensitive' as const } },
+                        ],
+                    }
+                    : {}),
+            },
+            include: {
+                user: { select: { email: true } },
+                gradeLevel: true,
+                section: true,
+            },
+            orderBy: { lastName: 'asc' },
+        });
+    }
+
+    /**
+     * Returns unenrolled students (no section, or PENDING/DROPPED status).
+     */
+    async findUnenrolled(params: { search?: string }) {
+        return this.prisma.studentProfile.findMany({
+            where: {
+                OR: [
+                    { sectionId: null },
+                    { enrollmentStatus: { in: [EnrollmentStatus.PENDING, EnrollmentStatus.DROPPED] } },
+                ],
+                ...(params.search
+                    ? {
+                        AND: [
+                            {
+                                OR: [
+                                    { firstName: { contains: params.search, mode: 'insensitive' as const } },
+                                    { lastName: { contains: params.search, mode: 'insensitive' as const } },
+                                    { studentId: { contains: params.search, mode: 'insensitive' as const } },
+                                ],
+                            },
+                        ],
+                    }
+                    : {}),
+            },
+            include: {
+                user: { select: { email: true } },
+                gradeLevel: true,
+                section: true,
+            },
+            orderBy: { lastName: 'asc' },
+        });
     }
 
     async findAll(params: { skip?: number; take?: number; search?: string }) {
@@ -103,26 +152,32 @@ export class StudentsService {
         return this.prisma.studentProfile.findMany({
             skip,
             take,
-            where: search ? {
-                OR: [
-                    { firstName: { contains: search, mode: 'insensitive' } },
-                    { lastName: { contains: search, mode: 'insensitive' } },
-                    { studentId: { contains: search, mode: 'insensitive' } },
-                ]
-            } : undefined,
-            include: { gradeLevel: true, section: true }
+            where: search
+                ? {
+                    OR: [
+                        { firstName: { contains: search, mode: 'insensitive' as const } },
+                        { lastName: { contains: search, mode: 'insensitive' as const } },
+                        { studentId: { contains: search, mode: 'insensitive' as const } },
+                    ],
+                }
+                : undefined,
+            include: { gradeLevel: true, section: true, user: { select: { email: true } } },
+            orderBy: { lastName: 'asc' },
         });
     }
 
     async findOne(id: string) {
-        return this.prisma.studentProfile.findUnique({
+        const student = await this.prisma.studentProfile.findUnique({
             where: { id },
             include: {
                 user: true,
                 gradeLevel: true,
                 section: true,
-                enrollments: { include: { subject: true } }
-            }
+                enrollments: { include: { subject: true } },
+                parents: true,
+            },
         });
+        if (!student) throw new NotFoundException('Student not found');
+        return student;
     }
 }

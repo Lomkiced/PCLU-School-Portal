@@ -2,7 +2,6 @@ import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/co
 import { StudentsService } from './students.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Role } from '@sms/types';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -12,20 +11,41 @@ export class StudentsController {
 
     @Roles('ADMIN')
     @Post()
-    async create(@Body() createStudentDto: any) {
+    async create(@Body() body: {
+        student: { firstName: string; lastName: string; email: string };
+        parent: { firstName: string; lastName: string; occupation: string };
+    }) {
         return {
             success: true,
-            data: await this.studentsService.createStudent(createStudentDto),
-            message: 'Student enrolled successfully'
+            data: await this.studentsService.createStudentWithParent(body),
+            message: 'Student and parent accounts created successfully',
         };
     }
 
     @Roles('ADMIN', 'TEACHER')
     @Get()
-    async findAll(@Query('search') search: string) {
+    async findAll(@Query('search') search?: string) {
         return {
             success: true,
-            data: await this.studentsService.findAll({ search })
+            data: await this.studentsService.findAll({ search }),
+        };
+    }
+
+    @Roles('ADMIN', 'TEACHER')
+    @Get('enrolled')
+    async findEnrolled(@Query('search') search?: string) {
+        return {
+            success: true,
+            data: await this.studentsService.findEnrolled({ search }),
+        };
+    }
+
+    @Roles('ADMIN', 'TEACHER')
+    @Get('unenrolled')
+    async findUnenrolled(@Query('search') search?: string) {
+        return {
+            success: true,
+            data: await this.studentsService.findUnenrolled({ search }),
         };
     }
 
@@ -34,7 +54,7 @@ export class StudentsController {
     async findOne(@Param('id') id: string) {
         return {
             success: true,
-            data: await this.studentsService.findOne(id)
+            data: await this.studentsService.findOne(id),
         };
     }
 }
