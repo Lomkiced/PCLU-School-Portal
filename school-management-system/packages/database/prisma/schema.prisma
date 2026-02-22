@@ -1,0 +1,695 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// AUTH & USERS
+// ==========================================
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  passwordHash   String
+  role           Role
+  fcmToken       String?
+  profilePicture String?
+  isFirstLogin   Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  studentProfile StudentProfile?
+  teacherProfile TeacherProfile?
+  parentProfile  ParentProfile?
+  adminProfile   AdminProfile?
+
+  // Generic Relations
+  sentMessages     Message[]         @relation("SentMessages")
+  receivedMessages Message[]         @relation("ReceivedMessages")
+  groupMemberships GroupChatMember[]
+  notifications    Notification[]
+  credential       Credential?
+  announcements    Announcement[]    @relation("AnnouncementAuthor")
+}
+
+model StudentProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  studentId        String   @unique // year-grade-sequence format
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  firstName        String
+  lastName         String
+  middleName       String?
+  birthdate        DateTime
+  gender           String
+  address          String
+  
+  guardianName     String
+  guardianRelation String
+  guardianContact  String
+  guardianEmail    String?
+  
+  enrollmentStatus EnrollmentStatus @default(ENROLLED)
+  qrCodeUrl        String?
+  
+  gradeLevelId     String?
+  gradeLevel       GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+  
+  sectionId        String?
+  section          Section?    @relation(fields: [sectionId], references: [id])
+
+  parents          ParentProfile[] @relation("StudentParents")
+  
+  enrollments      SubjectEnrollment[]
+  attendance       AttendanceRecord[]
+  grades           Grade[]
+  quizSubmissions  QuizSubmission[]
+  activitySubs     ActivitySubmission[]
+  fees             StudentFee[]
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  DROPPED
+  GRADUATED
+  TRANSFERRED
+  PENDING
+}
+
+model TeacherProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  employeeId    String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName     String
+  lastName      String
+  middleName    String?
+  birthdate     DateTime
+  gender        String
+  address       String
+  contactNumber String
+  position      String // e.g. "Senior Teacher II"
+
+  departmentId  String?
+  department    Department? @relation("DepartmentTeachers", fields: [departmentId], references: [id])
+  headOfDept    Department? @relation("DepartmentHead")
+
+  advisoryClasses Section[] @relation("Adviser")
+  
+  assignments   TeacherAssignment[]
+  quizzes       Quiz[]
+  activities    Activity[]
+}
+
+model ParentProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  firstName     String
+  lastName      String
+  contactNumber String
+  
+  students      StudentProfile[] @relation("StudentParents")
+}
+
+model AdminProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName     String
+  lastName      String
+  position      String
+}
+
+model Credential {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username       String   @unique
+  plainPassword  String   // Temporary plain password for printing
+  printedAt      DateTime?
+}
+
+// ==========================================
+// ACADEMICS
+// ==========================================
+
+model AcademicYear {
+  id          String   @id @default(uuid())
+  label       String   // e.g. "2024-2025"
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(false)
+  
+  enrollments SubjectEnrollment[]
+  assignments TeacherAssignment[]
+  fees        FeeStructure[]
+  grades      Grade[]
+}
+
+model Department {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  
+  headTeacherId String?  @unique
+  headTeacher   TeacherProfile? @relation("DepartmentHead", fields: [headTeacherId], references: [id])
+  
+  teachers      TeacherProfile[] @relation("DepartmentTeachers")
+}
+
+enum SchoolLevel {
+  KINDER
+  ELEM
+  JHS
+  SHS
+}
+
+model GradeLevel {
+  id          String   @id @default(uuid())
+  name        String   // K1, Grade 1, Grade 12 - STEM
+  schoolLevel SchoolLevel
+  
+  sections    Section[]
+  students    StudentProfile[]
+  subjects    Subject[]
+  feeStructures FeeStructure[]
+}
+
+model Section {
+  id           String   @id @default(uuid())
+  name         String
+  capacity     Int
+  
+  gradeLevelId String
+  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  
+  adviserId    String?
+  adviser      TeacherProfile? @relation("Adviser", fields: [adviserId], references: [id])
+  
+  roomId       String?
+  room         Room? @relation(fields: [roomId], references: [id])
+
+  students     StudentProfile[]
+  enrollments  SubjectEnrollment[]
+  assignments  TeacherAssignment[]
+  attendance   AttendanceRecord[]
+  groupChat    GroupChat?
+  quizzes      Quiz[]
+  activities   Activity[]
+  lmsContents  LMSContent[]
+  timetableSlots TimetableSlot[]
+}
+
+enum RoomType {
+  CLASSROOM
+  LAB
+  GYM
+  OTHER
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  name      String
+  capacity  Int
+  type      RoomType
+  building  String
+  floor     String
+  
+  sections  Section[]
+  timetableSlots TimetableSlot[]
+}
+
+enum SubjectType {
+  CORE
+  ELECTIVE
+  SPECIALIZED
+}
+
+model Subject {
+  id             String   @id @default(uuid())
+  name           String
+  code           String   @unique
+  units          Float
+  description    String?
+  subjectType    SubjectType
+  
+  gradeLevelId   String?
+  gradeLevel     GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+
+  // Prereqs
+  prerequisites  Subject[] @relation("Prerequisites")
+  prerequisiteFor Subject[] @relation("Prerequisites")
+  
+  // Coreqs
+  corequisites   Subject[] @relation("Corequisites")
+  corequisiteFor Subject[] @relation("Corequisites")
+
+  enrollments    SubjectEnrollment[]
+  assignments    TeacherAssignment[]
+  lmsContents    LMSContent[]
+  quizzes        Quiz[]
+  activities     Activity[]
+  grades         Grade[]
+  timetableSlots TimetableSlot[]
+}
+
+enum EnrollmentGradeStatus {
+  IN_PROGRESS
+  PASSED
+  FAILED
+  DROPPED
+}
+
+model SubjectEnrollment {
+  id             String   @id @default(uuid())
+  
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  subjectId      String
+  subject        Subject @relation(fields: [subjectId], references: [id])
+  
+  sectionId      String
+  section        Section @relation(fields: [sectionId], references: [id])
+  
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  
+  status         EnrollmentGradeStatus @default(IN_PROGRESS)
+  finalGrade     Float?
+  remarks        String?
+
+  @@unique([studentId, subjectId, academicYearId])
+}
+
+model TeacherAssignment {
+  id             String   @id @default(uuid())
+  
+  teacherId      String
+  teacher        TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  
+  subjectId      String
+  subject        Subject @relation(fields: [subjectId], references: [id])
+  
+  sectionId      String
+  section        Section @relation(fields: [sectionId], references: [id])
+  
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  @@unique([teacherId, subjectId, sectionId, academicYearId])
+}
+
+// ==========================================
+// TIMETABLE
+// ==========================================
+
+model Timetable {
+  id         String   @id @default(uuid())
+  label      String   // e.g. "Main Timetable SY 24-25"
+  isActive   Boolean  @default(false)
+  slots      TimetableSlot[]
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model TimetableSlot {
+  id          String   @id @default(uuid())
+  
+  timetableId String
+  timetable   Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  
+  subjectId   String
+  subject     Subject @relation(fields: [subjectId], references: [id])
+  
+  teacherId   String
+  // Relation handled loosely via ID or we could link to TeacherProfile directly (skipping the full typed relation to reduce cycles, but let's link it properly if needed)
+  
+  roomId      String
+  room        Room @relation(fields: [roomId], references: [id])
+  
+  sectionId   String
+  section     Section @relation(fields: [sectionId], references: [id])
+  
+  dayOfWeek   DayOfWeek
+  startTime   String   // e.g. "08:00"
+  endTime     String   // e.g. "09:00"
+}
+
+// ==========================================
+// ATTENDANCE & GRADES
+// ==========================================
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model AttendanceRecord {
+  id          String   @id @default(uuid())
+  
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  sectionId   String
+  section     Section @relation(fields: [sectionId], references: [id])
+  
+  date        DateTime @db.Date // Only store the date part
+  status      AttendanceStatus
+  scannedAt   DateTime?
+  scannedBy   String? // e.g. ID of teacher who scanned it
+
+  @@unique([studentId, sectionId, date])
+}
+
+model Grade {
+  id                 String   @id @default(uuid())
+  
+  studentId          String
+  student            StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  subjectId          String
+  subject            Subject @relation(fields: [subjectId], references: [id])
+  
+  academicYearId     String
+  academicYear       AcademicYear @relation(fields: [academicYearId], references: [id])
+  
+  quarter            Int      // 1, 2, 3, 4
+  
+  writtenWorks       Float
+  performanceTasks   Float
+  quarterlyAssessment Float
+  finalGrade         Float    // Computed (WW + PT + QA) weighted
+  remarks            String?
+  generatedFeedback  String?  @db.Text // From AI
+
+  @@unique([studentId, subjectId, academicYearId, quarter])
+}
+
+// ==========================================
+// LMS (Quizzes, Activities, Content)
+// ==========================================
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+model Quiz {
+  id          String   @id @default(uuid())
+  title       String
+  
+  teacherId   String
+  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
+  
+  subjectId   String
+  subject     Subject @relation(fields: [subjectId], references: [id])
+  
+  sectionId   String
+  section     Section @relation(fields: [sectionId], references: [id])
+  
+  questions   Json     // Array of questions [ {type, text, options, answer, points} ]
+  totalPoints Int
+  deadline    DateTime
+  status      QuizStatus @default(DRAFT)
+  
+  submissions QuizSubmission[]
+}
+
+model QuizSubmission {
+  id                 String   @id @default(uuid())
+  
+  quizId             String
+  quiz               Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  
+  studentId          String
+  student            StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  answers            Json     // Array of answered questions
+  score              Float
+  autoGradedFeedback String?  @db.Text
+  submittedAt        DateTime @default(now())
+
+  @@unique([quizId, studentId])
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  title       String
+  description String   @db.Text
+  attachments Json?    // Array of URLs
+  
+  teacherId   String
+  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
+  
+  subjectId   String
+  subject     Subject @relation(fields: [subjectId], references: [id])
+  
+  sectionId   String
+  section     Section @relation(fields: [sectionId], references: [id])
+  
+  dueDate     DateTime
+  maxScore    Int?
+  
+  submissions ActivitySubmission[]
+}
+
+model ActivitySubmission {
+  id          String   @id @default(uuid())
+  
+  activityId  String
+  activity    Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  fileUrls    Json     // string[]
+  grade       Float?
+  feedback    String?  @db.Text
+  submittedAt DateTime @default(now())
+
+  @@unique([activityId, studentId])
+}
+
+enum ContentType {
+  LESSON
+  MATERIAL
+  ANNOUNCEMENT
+}
+
+model LMSContent {
+  id          String   @id @default(uuid())
+  title       String
+  body        String   @db.Text // Rich Text HTML
+  attachments Json?    // Array of URLs
+  type        ContentType
+  
+  subjectId   String
+  subject     Subject @relation(fields: [subjectId], references: [id])
+  
+  sectionId   String
+  section     Section @relation(fields: [sectionId], references: [id])
+  
+  publishedAt DateTime?
+}
+
+// ==========================================
+// COMMUNICATIONS
+// ==========================================
+
+enum VisibilityTarget {
+  ALL
+  STUDENTS_ONLY
+  TEACHERS_ONLY
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  body        String   @db.Text // Rich Text HTML
+  
+  authorId    String
+  author      User     @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  
+  visibility  VisibilityTarget
+  publishedAt DateTime?
+  expiresAt   DateTime?
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  recipientId String
+  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  
+  body        String   @db.Text
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model GroupChat {
+  id          String   @id @default(uuid())
+  name        String
+  
+  sectionId   String?  @unique
+  section     Section? @relation(fields: [sectionId], references: [id])
+  
+  messages    GroupChatMessage[]
+  members     GroupChatMember[]
+}
+
+model GroupChatMessage {
+  id          String   @id @default(uuid())
+  
+  chatId      String
+  chat        GroupChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  
+  senderId    String
+  // Usually mapping to User to keep generic
+  
+  body        String   @db.Text
+  attachments Json?    // string[]
+  createdAt   DateTime @default(now())
+}
+
+model GroupChatMember {
+  id          String   @id @default(uuid())
+  
+  chatId      String
+  chat        GroupChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+}
+
+enum NotificationType {
+  INFO
+  ALERT
+  GRADE_UPDATE
+  NEW_MESSAGE
+  NEW_ANNOUNCEMENT
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title       String
+  body        String   @db.Text
+  type        NotificationType
+  referenceId String?  // Optional ID to navigate to (e.g., messageId, quizId)
+  
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// ==========================================
+// FINANCE
+// ==========================================
+
+enum FeeType {
+  TUITION
+  MISC
+  LABORATORY
+  OTHERS
+}
+
+model FeeStructure {
+  id             String   @id @default(uuid())
+  name           String
+  amount         Float
+  
+  gradeLevelId   String?
+  gradeLevel     GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+  
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  
+  feeType        FeeType
+  
+  studentFees    StudentFee[]
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  UNPAID
+}
+
+model StudentFee {
+  id             String   @id @default(uuid())
+  
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  feeStructureId String
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id])
+  
+  amountDue      Float
+  amountPaid     Float    @default(0)
+  balance        Float
+  dueDate        DateTime
+  status         PaymentStatus @default(UNPAID)
+  
+  payments       PaymentRecord[]
+
+  @@unique([studentId, feeStructureId])
+}
+
+model PaymentRecord {
+  id              String   @id @default(uuid())
+  
+  studentFeeId    String
+  studentFee      StudentFee @relation(fields: [studentFeeId], references: [id], onDelete: Cascade)
+  
+  amountPaid      Float
+  paymentDate     DateTime @default(now())
+  referenceNumber String?  @unique
+  method          String   // CASH, GCASH, BANK_TRANSFER
+}
+
+// ==========================================
+// SYSTEM
+// ==========================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  adminId     String
+  action      String
+  targetId    String?
+  details     Json?    
+  timestamp   DateTime @default(now())
+}
