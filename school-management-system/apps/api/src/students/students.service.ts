@@ -180,4 +180,29 @@ export class StudentsService {
         if (!student) throw new NotFoundException('Student not found');
         return student;
     }
+
+    /**
+     * Assigns an unenrolled student to a grade level and section.
+     * Updates enrollment status to ENROLLED.
+     */
+    async enrollStudent(data: { studentId: string; gradeLevelId: string; sectionId: string }) {
+        const student = await this.prisma.studentProfile.findUnique({
+            where: { id: data.studentId },
+        });
+        if (!student) throw new NotFoundException('Student not found');
+
+        return this.prisma.studentProfile.update({
+            where: { id: data.studentId },
+            data: {
+                gradeLevelId: data.gradeLevelId,
+                sectionId: data.sectionId,
+                enrollmentStatus: EnrollmentStatus.ENROLLED,
+            },
+            include: {
+                gradeLevel: true,
+                section: true,
+                user: { select: { email: true } },
+            },
+        });
+    }
 }

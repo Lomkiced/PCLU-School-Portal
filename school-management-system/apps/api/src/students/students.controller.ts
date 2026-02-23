@@ -57,4 +57,21 @@ export class StudentsController {
             data: await this.studentsService.findOne(id),
         };
     }
+
+    @Roles('ADMIN')
+    @Post(':id/enroll')
+    async enroll(
+        @Param('id') id: string,
+        @Body() body: { gradeLevelId: string; sectionId: string },
+    ) {
+        return {
+            success: true,
+            data: await this.studentsService.enrollStudent({
+                studentId: id,
+                gradeLevelId: body.gradeLevelId,
+                sectionId: body.sectionId,
+            }),
+            message: 'Student enrolled successfully',
+        };
+    }
 }

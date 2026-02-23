@@ -5,9 +5,10 @@ import { api } from "@/lib/api";
 import Link from "next/link";
 import {
     ChevronRight, Home, Search, Loader2,
-    ChevronUp, ChevronDown, ChevronsUpDown, UserX, User, Plus,
+    ChevronUp, ChevronDown, ChevronsUpDown, UserX, User, Plus, GraduationCap,
 } from "lucide-react";
 import { AddStudentModal } from "@/components/add-student-modal";
+import { AssignSectionModal } from "@/components/assign-section-modal";
 
 interface Student {
     id: string;
@@ -39,6 +40,7 @@ export default function UnenrolledStudentsPage() {
     const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
     const [currentPage, setCurrentPage] = useState(1);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [assignStudent, setAssignStudent] = useState<Student | null>(null);
     const pageSize = 15;
 
     const fetchStudents = () => {
@@ -151,6 +153,7 @@ export default function UnenrolledStudentsPage() {
                                         Status <SortIcon field="enrollmentStatus" />
                                     </button>
                                 </th>
+                                <th className="text-right px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -171,11 +174,19 @@ export default function UnenrolledStudentsPage() {
                                             {s.enrollmentStatus}
                                         </span>
                                     </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <button
+                                            onClick={() => setAssignStudent(s)}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs font-bold hover:bg-emerald-500/20 transition-colors"
+                                        >
+                                            <GraduationCap className="w-3.5 h-3.5" /> Assign Section
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                             {paginated.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
+                                    <td colSpan={5} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
                                         <UserX className="w-8 h-8 mx-auto mb-2 opacity-30" />
                                         <p className="font-medium">{search ? "No students match your search" : "No unenrolled students found"}</p>
                                     </td>
@@ -201,10 +212,19 @@ export default function UnenrolledStudentsPage() {
                 )}
             </div>
 
+            {/* Add Student Modal */}
             <AddStudentModal
                 open={showAddModal}
                 onClose={() => setShowAddModal(false)}
                 onSuccess={() => { setShowAddModal(false); fetchStudents(); }}
+            />
+
+            {/* Assign Section Modal */}
+            <AssignSectionModal
+                open={!!assignStudent}
+                student={assignStudent}
+                onClose={() => setAssignStudent(null)}
+                onSuccess={() => { setAssignStudent(null); fetchStudents(); }}
             />
         </div>
     );

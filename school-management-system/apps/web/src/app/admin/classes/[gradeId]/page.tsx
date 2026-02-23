@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ChevronRight, Users, Loader2, AlertCircle, Home, School } from "lucide-react";
+import { ChevronRight, Users, Loader2, AlertCircle, Home, School, Plus } from "lucide-react";
+import { CreateSectionModal } from "@/components/create-section-modal";
 
 interface Section {
     id: string;
@@ -29,13 +30,17 @@ export default function GradeDetailPage() {
     const [grade, setGrade] = useState<GradeLevel | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [showCreateSection, setShowCreateSection] = useState(false);
 
-    useEffect(() => {
+    const fetchGrade = () => {
+        setLoading(true);
         api.get(`/grade-levels/${gradeId}`)
             .then((res) => setGrade(res.data.data))
             .catch(() => setError("Failed to load grade level"))
             .finally(() => setLoading(false));
-    }, [gradeId]);
+    };
+
+    useEffect(() => { fetchGrade(); }, [gradeId]);
 
     if (loading) {
         return (
@@ -70,13 +75,19 @@ export default function GradeDetailPage() {
             </nav>
 
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h2 className="text-xl font-bold">{grade.name}</h2>
                     <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
                         {grade._count.sections} section{grade._count.sections !== 1 ? "s" : ""} · {grade._count.students} student{grade._count.students !== 1 ? "s" : ""}
                     </p>
                 </div>
+                <button
+                    onClick={() => setShowCreateSection(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-all shadow-md shadow-teal-600/25"
+                >
+                    <Plus className="w-4 h-4" /> Create Section
+                </button>
             </div>
 
             {/* Sections Grid */}
@@ -126,6 +137,15 @@ export default function GradeDetailPage() {
                     <p className="text-sm text-[hsl(var(--muted-foreground)/0.7)] mt-1">Create sections for this grade level to manage students.</p>
                 </div>
             )}
+
+            {/* Create Section Modal */}
+            <CreateSectionModal
+                open={showCreateSection}
+                gradeId={gradeId}
+                gradeName={grade.name}
+                onClose={() => setShowCreateSection(false)}
+                onSuccess={() => { setShowCreateSection(false); fetchGrade(); }}
+            />
         </div>
     );
 }

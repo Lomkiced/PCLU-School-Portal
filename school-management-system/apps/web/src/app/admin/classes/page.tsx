@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
-import { School, Users, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import { School, Users, ChevronRight, Loader2, AlertCircle, Plus } from "lucide-react";
+import { CreateGradeLevelModal } from "@/components/create-grade-level-modal";
 
 interface GradeLevel {
     id: string;
@@ -30,13 +31,17 @@ export default function ClassesPage() {
     const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [showCreateModal, setShowCreateModal] = useState(false);
 
-    useEffect(() => {
+    const fetchGradeLevels = () => {
+        setLoading(true);
         api.get("/grade-levels")
             .then((res) => setGradeLevels(res.data.data))
             .catch(() => setError("Failed to load grade levels"))
             .finally(() => setLoading(false));
-    }, []);
+    };
+
+    useEffect(() => { fetchGradeLevels(); }, []);
 
     if (loading) {
         return (
@@ -66,11 +71,19 @@ export default function ClassesPage() {
     return (
         <div className="space-y-8">
             {/* Header */}
-            <div>
-                <h2 className="text-xl font-bold">Class Management</h2>
-                <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                    Browse grade levels, sections, and enrolled students
-                </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h2 className="text-xl font-bold">Class Management</h2>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                        Browse grade levels, sections, and enrolled students
+                    </p>
+                </div>
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-white text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-all shadow-md shadow-[hsl(var(--primary)/0.25)]"
+                >
+                    <Plus className="w-4 h-4" /> Create Grade Level
+                </button>
             </div>
 
             {/* Stats */}
@@ -158,6 +171,13 @@ export default function ClassesPage() {
                     <p className="text-sm text-[hsl(var(--muted-foreground)/0.7)] mt-1">Create grade levels first to start managing classes.</p>
                 </div>
             )}
+
+            {/* Create Grade Level Modal */}
+            <CreateGradeLevelModal
+                open={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                onSuccess={() => { setShowCreateModal(false); fetchGradeLevels(); }}
+            />
         </div>
     );
 }
