@@ -116,7 +116,7 @@ model TeacherProfile {
 
   advisoryClasses Section[] @relation("Adviser")
   
-  assignments   TeacherAssignment[]
+  sectionSubjects SectionSubject[]
   quizzes       Quiz[]
   activities    Activity[]
 }
@@ -163,7 +163,7 @@ model AcademicYear {
   isActive    Boolean  @default(false)
   
   enrollments SubjectEnrollment[]
-  assignments TeacherAssignment[]
+  sectionSubjects SectionSubject[]
   fees        FeeStructure[]
   grades      Grade[]
 }
@@ -213,7 +213,7 @@ model Section {
 
   students     StudentProfile[]
   enrollments  SubjectEnrollment[]
-  assignments  TeacherAssignment[]
+  sectionSubjects SectionSubject[]
   attendance   AttendanceRecord[]
   groupChat    GroupChat?
   quizzes      Quiz[]
@@ -275,7 +275,7 @@ model Subject {
   corequisiteFor Subject[] @relation("Corequisites")
 
   enrollments    SubjectEnrollment[]
-  assignments    TeacherAssignment[]
+  sectionSubjects SectionSubject[]
   lmsContents    LMSContent[]
   quizzes        Quiz[]
   activities     Activity[]
@@ -312,7 +312,7 @@ model SubjectEnrollment {
   @@unique([studentId, subjectId, academicYearId])
 }
 
-model TeacherAssignment {
+model SectionSubject {
   id             String   @id @default(uuid())
   
   teacherId      String

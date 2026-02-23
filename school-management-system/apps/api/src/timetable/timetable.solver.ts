@@ -55,7 +55,7 @@ export class TimetableSolver {
 
     async solve(academicYearId: string): Promise<CSPSolution[]> {
         const sections = await this.prisma.section.findMany({ include: { students: true } });
-        const teachers = await this.prisma.teacherProfile.findMany({ include: { assignments: { where: { academicYearId } } } });
+        const teachers = await this.prisma.teacherProfile.findMany({ include: { sectionSubjects: { where: { academicYearId } } } });
         const rooms = await this.prisma.room.findMany();
         const subjects = await this.prisma.subject.findMany();
 
@@ -64,7 +64,7 @@ export class TimetableSolver {
         // 1. Build CSP Variables (what needs to be scheduled)
         const variables: CSPVariable[] = [];
         for (const t of teachers) {
-            for (const a of t.assignments) {
+            for (const a of t.sectionSubjects) {
                 const subject = subjects.find(s => s.id === a.subjectId);
                 if (!subject) continue;
 

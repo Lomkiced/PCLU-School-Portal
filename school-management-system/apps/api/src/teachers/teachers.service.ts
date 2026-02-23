@@ -111,7 +111,7 @@ export class TeachersService {
                     teacherId: user.teacherProfile!.id,
                     ...a
                 }));
-                await tx.teacherAssignment.createMany({ data: assignments });
+                await tx.sectionSubject.createMany({ data: assignments });
             }
 
             if (data.advisorySectionId) {
@@ -161,7 +161,7 @@ export class TeachersService {
                 user: true,
                 department: true,
                 advisoryClasses: true,
-                assignments: { include: { subject: true, section: true } }
+                sectionSubjects: { include: { subject: true, section: true } }
             }
         });
         if (!teacher) throw new NotFoundException('Teacher not found');

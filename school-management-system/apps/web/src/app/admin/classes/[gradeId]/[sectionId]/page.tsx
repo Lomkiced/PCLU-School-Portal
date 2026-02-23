@@ -6,8 +6,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
     ChevronRight, Home, Users, Search, Loader2, AlertCircle,
-    ChevronUp, ChevronDown, ChevronsUpDown, Mail, User,
+    ChevronUp, ChevronDown, ChevronsUpDown, Mail, User, BookOpen, Plus, Trash2,
 } from "lucide-react";
+import { AssignSectionSubjectModal } from "@/components/assign-section-subject-modal";
 
 interface Student {
     id: string;
@@ -23,6 +24,23 @@ interface Student {
     parents: { firstName: string; lastName: string; contactNumber: string }[];
 }
 
+interface AssignedSubject {
+    id: string;
+    subject: {
+        id: string;
+        code: string;
+        name: string;
+        units: number;
+        subjectType: string;
+    };
+    teacher: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        employeeId: string;
+    };
+}
+
 interface SectionDetail {
     id: string;
     name: string;
@@ -31,6 +49,7 @@ interface SectionDetail {
     room: { name: string } | null;
     gradeLevel: { id: string; name: string };
     students: Student[];
+    sectionSubjects: AssignedSubject[];
     _count: { students: number };
 }
 
@@ -53,17 +72,48 @@ export default function SectionDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
+
+    // Tabs
+    const [activeTab, setActiveTab] = useState<"students" | "subjects">("students");
+
+    // Modals
+    const [showAssignModal, setShowAssignModal] = useState(false);
+    const [deletingSubjectId, setDeletingSubjectId] = useState<string | null>(null);
+
+    // Pagination/Sorting for Students
     const [sortField, setSortField] = useState<SortField>("lastName");
     const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
 
-    useEffect(() => {
+    const fetchSection = () => {
         api.get(`/sections/${sectionId}`)
-            .then((res) => setSection(res.data.data))
+            .then((res) => {
+                // Ensure sectionSubjects exists even if backend returns undefined
+                const data = res.data.data;
+                if (!data.sectionSubjects) data.sectionSubjects = [];
+                setSection(data);
+            })
             .catch(() => setError("Failed to load section"))
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchSection();
     }, [sectionId]);
+
+    const handleRemoveSubject = async (subjectId: string) => {
+        if (!confirm("Are you sure you want to remove this subject from the section?")) return;
+        setDeletingSubjectId(subjectId);
+        try {
+            await api.delete(`/sections/${sectionId}/subjects/${subjectId}`);
+            fetchSection();
+        } catch (err) {
+            alert("Failed to remove subject");
+        } finally {
+            setDeletingSubjectId(null);
+        }
+    };
 
     if (loading) {
         return (
@@ -82,8 +132,8 @@ export default function SectionDetailPage() {
         );
     }
 
-    // Filter & sort
-    const filtered = section.students
+    // Filter & sort students
+    const filteredStudents = section.students
         .filter((s) => {
             const q = search.toLowerCase();
             return (
@@ -101,8 +151,8 @@ export default function SectionDetailPage() {
                 : String(bVal).localeCompare(String(aVal));
         });
 
-    const totalPages = Math.ceil(filtered.length / pageSize);
-    const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const totalPages = Math.ceil(filteredStudents.length / pageSize);
+    const paginatedStudents = filteredStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -162,149 +212,221 @@ export default function SectionDetailPage() {
                         )}
                     </div>
                 </div>
-            </div>
-
-            {/* Search */}
-            <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-                <input
-                    type="text"
-                    placeholder="Search students..."
-                    value={search}
-                    onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-sm font-medium placeholder:text-[hsl(var(--muted-foreground)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all"
-                />
-            </div>
-
-            {/* Data Table */}
-            <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] card-shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)]">
-                                <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">
-                                    <button onClick={() => handleSort("studentId")} className="flex items-center gap-1 hover:text-[hsl(var(--foreground))] transition-colors">
-                                        Student ID <SortIcon field="studentId" />
-                                    </button>
-                                </th>
-                                <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">
-                                    <button onClick={() => handleSort("lastName")} className="flex items-center gap-1 hover:text-[hsl(var(--foreground))] transition-colors">
-                                        Name <SortIcon field="lastName" />
-                                    </button>
-                                </th>
-                                <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] hidden md:table-cell">
-                                    <button onClick={() => handleSort("gender")} className="flex items-center gap-1 hover:text-[hsl(var(--foreground))] transition-colors">
-                                        Gender <SortIcon field="gender" />
-                                    </button>
-                                </th>
-                                <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] hidden lg:table-cell">
-                                    Email
-                                </th>
-                                <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] hidden lg:table-cell">
-                                    Guardian
-                                </th>
-                                <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">
-                                    <button onClick={() => handleSort("enrollmentStatus")} className="flex items-center gap-1 hover:text-[hsl(var(--foreground))] transition-colors">
-                                        Status <SortIcon field="enrollmentStatus" />
-                                    </button>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {paginated.map((student, i) => (
-                                <tr
-                                    key={student.id}
-                                    className={`border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--muted)/0.3)] transition-colors ${i % 2 === 0 ? "" : "bg-[hsl(var(--muted)/0.15)]"}`}
-                                >
-                                    <td className="px-4 py-3 font-mono text-xs text-[hsl(var(--muted-foreground))]">
-                                        {student.studentId}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-[hsl(var(--primary)/0.1)] flex items-center justify-center shrink-0">
-                                                <User className="w-4 h-4 text-[hsl(var(--primary))]" />
-                                            </div>
-                                            <div>
-                                                <p className="font-semibold text-sm">
-                                                    {student.lastName}, {student.firstName}
-                                                    {student.middleName ? ` ${student.middleName.charAt(0)}.` : ""}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 hidden md:table-cell">
-                                        <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${student.gender === "MALE" ? "bg-blue-500/10 text-blue-500" :
-                                                student.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500" :
-                                                    "bg-gray-500/10 text-gray-500"
-                                            }`}>
-                                            {student.gender === "MALE" ? "Male" : student.gender === "FEMALE" ? "Female" : student.gender === "OTHER" ? "Other" : student.gender}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 hidden lg:table-cell">
-                                        <div className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
-                                            <Mail className="w-3.5 h-3.5" />
-                                            {student.user.email}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-[hsl(var(--muted-foreground))]">
-                                        <p className="font-medium">{student.parents?.[0] ? `${student.parents[0].firstName} ${student.parents[0].lastName}` : student.guardianName}</p>
-                                        <p>{student.parents?.[0]?.contactNumber || student.guardianContact}</p>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${statusColors[student.enrollmentStatus] || "bg-gray-500/10 text-gray-500"}`}>
-                                            {student.enrollmentStatus}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                            {paginated.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
-                                        <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                        <p className="font-medium">
-                                            {search ? "No students match your search" : "No students enrolled in this section"}
-                                        </p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-[hsl(var(--border))]">
-                        <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length} students
-                        </p>
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted)/0.8)] disabled:opacity-40 transition-colors"
-                            >
-                                Prev
-                            </button>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                <button
-                                    key={page}
-                                    onClick={() => setCurrentPage(page)}
-                                    className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${page === currentPage ? "bg-[hsl(var(--primary))] text-white" : "hover:bg-[hsl(var(--muted))]"}`}
-                                >
-                                    {page}
-                                </button>
-                            ))}
-                            <button
-                                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted)/0.8)] disabled:opacity-40 transition-colors"
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
+                {activeTab === "subjects" && (
+                    <button
+                        onClick={() => setShowAssignModal(true)}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-white text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-all shadow-md shadow-[hsl(var(--primary)/0.25)]"
+                    >
+                        <Plus className="w-4 h-4" /> Assign Subject
+                    </button>
                 )}
             </div>
+
+            {/* Tabs */}
+            <div className="flex items-center gap-2 border-b border-[hsl(var(--border))]">
+                <button
+                    onClick={() => setActiveTab("students")}
+                    className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "students" ? "border-[hsl(var(--primary))] text-[hsl(var(--foreground))]" : "border-transparent text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"}`}
+                >
+                    <Users className="w-4 h-4" /> Enrolled Students ({section.students.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab("subjects")}
+                    className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "subjects" ? "border-[hsl(var(--primary))] text-[hsl(var(--foreground))]" : "border-transparent text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"}`}
+                >
+                    <BookOpen className="w-4 h-4" /> Assigned Subjects ({section.sectionSubjects?.length || 0})
+                </button>
+            </div>
+
+            {/* Tab: STUDENTS */}
+            {activeTab === "students" && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="relative max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                        <input
+                            type="text"
+                            placeholder="Search students..."
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-sm font-medium placeholder:text-[hsl(var(--muted-foreground)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all"
+                        />
+                    </div>
+
+                    <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] card-shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)]">
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">
+                                            <button onClick={() => handleSort("studentId")} className="flex items-center gap-1 hover:text-[hsl(var(--foreground))] transition-colors">
+                                                Student ID <SortIcon field="studentId" />
+                                            </button>
+                                        </th>
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">
+                                            <button onClick={() => handleSort("lastName")} className="flex items-center gap-1 hover:text-[hsl(var(--foreground))] transition-colors">
+                                                Name <SortIcon field="lastName" />
+                                            </button>
+                                        </th>
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] hidden md:table-cell">Gender</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] hidden lg:table-cell">Email</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] hidden lg:table-cell">Guardian</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">
+                                            <button onClick={() => handleSort("enrollmentStatus")} className="flex items-center gap-1 hover:text-[hsl(var(--foreground))] transition-colors">
+                                                Status <SortIcon field="enrollmentStatus" />
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {paginatedStudents.map((student, i) => (
+                                        <tr key={student.id} className={`border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--muted)/0.3)] transition-colors ${i % 2 === 0 ? "" : "bg-[hsl(var(--muted)/0.15)]"}`}>
+                                            <td className="px-4 py-3 font-mono text-xs text-[hsl(var(--muted-foreground))]">{student.studentId}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-[hsl(var(--primary)/0.1)] flex items-center justify-center shrink-0">
+                                                        <User className="w-4 h-4 text-[hsl(var(--primary))]" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-sm">
+                                                            {student.lastName}, {student.firstName}
+                                                            {student.middleName ? ` ${student.middleName.charAt(0)}.` : ""}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 hidden md:table-cell">
+                                                <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${student.gender === "MALE" ? "bg-blue-500/10 text-blue-500" : student.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500" : "bg-gray-500/10 text-gray-500"}`}>
+                                                    {student.gender === "MALE" ? "Male" : student.gender === "FEMALE" ? "Female" : student.gender === "OTHER" ? "Other" : student.gender}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 hidden lg:table-cell">
+                                                <div className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
+                                                    <Mail className="w-3.5 h-3.5" /> {student.user.email}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 hidden lg:table-cell text-xs text-[hsl(var(--muted-foreground))]">
+                                                <p className="font-medium">{student.parents?.[0] ? `${student.parents[0].firstName} ${student.parents[0].lastName}` : student.guardianName}</p>
+                                                <p>{student.parents?.[0]?.contactNumber || student.guardianContact}</p>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${statusColors[student.enrollmentStatus] || "bg-gray-500/10 text-gray-500"}`}>
+                                                    {student.enrollmentStatus}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {paginatedStudents.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
+                                                <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                                <p className="font-medium">{search ? "No students match your search" : "No students enrolled in this section"}</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t border-[hsl(var(--border))]">
+                                <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                                    Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredStudents.length)} of {filteredStudents.length} students
+                                </p>
+                                <div className="flex items-center gap-1">
+                                    <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted)/0.8)] disabled:opacity-40 transition-colors">Prev</button>
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                        <button key={page} onClick={() => setCurrentPage(page)} className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${page === currentPage ? "bg-[hsl(var(--primary))] text-white" : "hover:bg-[hsl(var(--muted))]"}`}>{page}</button>
+                                    ))}
+                                    <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted)/0.8)] disabled:opacity-40 transition-colors">Next</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Tab: SUBJECTS */}
+            {activeTab === "subjects" && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] card-shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)]">
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">Code</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">Subject Name</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">Units</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">Type</th>
+                                        <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">Assigned Teacher</th>
+                                        <th className="text-right px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {section.sectionSubjects?.map(({ id, subject, teacher }, i) => (
+                                        <tr key={id} className={`border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--muted)/0.3)] transition-colors ${i % 2 === 0 ? "" : "bg-[hsl(var(--muted)/0.15)]"}`}>
+                                            <td className="px-4 py-3 font-mono text-xs font-bold text-[hsl(var(--primary))]">{subject.code}</td>
+                                            <td className="px-4 py-3 font-semibold">{subject.name}</td>
+                                            <td className="px-4 py-3 text-xs text-[hsl(var(--muted-foreground))]">{subject.units}u</td>
+                                            <td className="px-4 py-3">
+                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] text-xs font-bold">
+                                                    {subject.subjectType}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                                                        <User className="w-3 h-3 text-blue-500" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-xs">{teacher.lastName}, {teacher.firstName}</p>
+                                                        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{teacher.employeeId}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <button
+                                                    onClick={() => handleRemoveSubject(subject.id)}
+                                                    disabled={deletingSubjectId === subject.id}
+                                                    className="p-2 rounded-lg hover:bg-red-500/10 text-[hsl(var(--muted-foreground))] hover:text-red-500 transition-colors disabled:opacity-50"
+                                                    title="Remove subject"
+                                                >
+                                                    {deletingSubjectId === subject.id ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {(!section.sectionSubjects || section.sectionSubjects.length === 0) && (
+                                        <tr>
+                                            <td colSpan={6} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
+                                                <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                                <p className="font-medium">No subjects assigned yet.</p>
+                                                <button
+                                                    onClick={() => setShowAssignModal(true)}
+                                                    className="mt-3 text-xs font-semibold text-[hsl(var(--primary))] hover:underline"
+                                                >
+                                                    Assign a subject now
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal */}
+            <AssignSectionSubjectModal
+                open={showAssignModal}
+                sectionId={sectionId}
+                assignedSubjectIds={section.sectionSubjects?.map(s => s.subject.id) || []}
+                onClose={() => setShowAssignModal(false)}
+                onSuccess={() => { setShowAssignModal(false); fetchSection(); }}
+            />
         </div>
     );
 }
