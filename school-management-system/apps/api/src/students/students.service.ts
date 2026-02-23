@@ -91,11 +91,12 @@ export class StudentsService {
     /**
      * Returns enrolled students (those with a sectionId and ENROLLED status).
      */
-    async findEnrolled(params: { search?: string }) {
+    async findEnrolled(params: { search?: string; gradeLevelId?: string }) {
         return this.prisma.studentProfile.findMany({
             where: {
                 enrollmentStatus: EnrollmentStatus.ENROLLED,
                 sectionId: { not: null },
+                ...(params.gradeLevelId ? { gradeLevelId: params.gradeLevelId } : {}),
                 ...(params.search
                     ? {
                         OR: [

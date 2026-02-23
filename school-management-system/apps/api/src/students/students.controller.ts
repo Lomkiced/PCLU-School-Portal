@@ -33,10 +33,13 @@ export class StudentsController {
 
     @Roles('ADMIN', 'TEACHER')
     @Get('enrolled')
-    async findEnrolled(@Query('search') search?: string) {
+    async findEnrolled(
+        @Query('search') search?: string,
+        @Query('gradeLevelId') gradeLevelId?: string
+    ) {
         return {
             success: true,
-            data: await this.studentsService.findEnrolled({ search }),
+            data: await this.studentsService.findEnrolled({ search, gradeLevelId }),
         };
     }
 

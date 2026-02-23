@@ -39,17 +39,28 @@ export default function EnrolledStudentsPage() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [editStudent, setEditStudent] = useState<Student | null>(null);
     const [deleteStudent, setDeleteStudent] = useState<Student | null>(null);
+
+    // Grade Level Filter State
+    const [gradeLevels, setGradeLevels] = useState<{ id: string; name: string }[]>([]);
+    const [selectedGradeId, setSelectedGradeId] = useState<string>("all");
+
     const pageSize = 15;
+
+    // Fetch Grade Levels for Filter Dropdown
+    useEffect(() => {
+        api.get("/grade-levels").then((res) => setGradeLevels(res.data.data)).catch(() => { });
+    }, []);
 
     const fetchStudents = () => {
         setLoading(true);
-        api.get("/students/enrolled")
+        const query = selectedGradeId !== "all" ? `?gradeLevelId=${selectedGradeId}` : "";
+        api.get(`/students/enrolled${query}`)
             .then((res) => setStudents(res.data.data))
             .catch(() => setError("Failed to load enrolled students"))
             .finally(() => setLoading(false));
     };
 
-    useEffect(() => { fetchStudents(); }, []);
+    useEffect(() => { fetchStudents(); }, [selectedGradeId]);
 
     const filtered = students
         .filter((s) => {
@@ -122,16 +133,31 @@ export default function EnrolledStudentsPage() {
                 </button>
             </div>
 
-            {/* Search */}
-            <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-                <input
-                    type="text"
-                    placeholder="Search by name, ID, or email..."
-                    value={search}
-                    onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-sm font-medium placeholder:text-[hsl(var(--muted-foreground)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all"
-                />
+            {/* Controls */}
+            <div className="flex flex-col sm:flex-row gap-4">
+                {/* Search */}
+                <div className="relative max-w-sm flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                    <input
+                        type="text"
+                        placeholder="Search by name, ID, or email..."
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-sm font-medium placeholder:text-[hsl(var(--muted-foreground)/0.5)] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all"
+                    />
+                </div>
+
+                {/* Grade Level Filter */}
+                <select
+                    value={selectedGradeId}
+                    onChange={(e) => { setSelectedGradeId(e.target.value); setCurrentPage(1); }}
+                    className="px-4 py-2.5 rounded-xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all"
+                >
+                    <option value="all">All Grade Levels</option>
+                    {gradeLevels.map((grade) => (
+                        <option key={grade.id} value={grade.id}>{grade.name}</option>
+                    ))}
+                </select>
             </div>
 
             {/* Table */}
