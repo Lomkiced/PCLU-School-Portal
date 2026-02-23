@@ -176,6 +176,7 @@ model Department {
   headTeacher   TeacherProfile? @relation("DepartmentHead", fields: [headTeacherId], references: [id])
   
   teachers      TeacherProfile[] @relation("DepartmentTeachers")
+  subjects      Subject[]
 }
 
 enum SchoolLevel {
@@ -244,6 +245,8 @@ enum SubjectType {
   CORE
   ELECTIVE
   SPECIALIZED
+  HONORS
+  LAB
 }
 
 model Subject {
@@ -253,9 +256,15 @@ model Subject {
   units          Float
   description    String?
   subjectType    SubjectType
+  credits        Float    @default(3)
+  lectureHours   Int      @default(3)
+  labHours       Int      @default(0)
   
   gradeLevelId   String?
   gradeLevel     GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id])
 
   // Prereqs
   prerequisites  Subject[] @relation("Prerequisites")

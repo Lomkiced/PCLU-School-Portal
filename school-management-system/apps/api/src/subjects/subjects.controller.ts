@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { SubjectsService } from './subjects.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Role } from '@sms/database';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -12,10 +11,24 @@ export class SubjectsController {
 
     @Roles('ADMIN')
     @Post()
-    async create(@Body() body: any) {
+    async create(@Body() body: {
+        name: string;
+        code: string;
+        units: number;
+        credits?: number;
+        lectureHours?: number;
+        labHours?: number;
+        description?: string;
+        subjectType: string;
+        gradeLevelId?: string;
+        departmentId?: string;
+        prerequisiteIds?: string[];
+        corequisiteIds?: string[];
+    }) {
         return {
             success: true,
-            data: await this.subjectsService.create(body),
+            data: await this.subjectsService.create(body as any),
+            message: 'Subject created successfully',
         };
     }
 
@@ -25,6 +38,51 @@ export class SubjectsController {
         return {
             success: true,
             data: await this.subjectsService.findAll(),
+        };
+    }
+
+    @Roles('ADMIN', 'TEACHER')
+    @Get(':id')
+    async findOne(@Param('id') id: string) {
+        return {
+            success: true,
+            data: await this.subjectsService.findOne(id),
+        };
+    }
+
+    @Roles('ADMIN')
+    @Patch(':id')
+    async update(
+        @Param('id') id: string,
+        @Body() body: {
+            name?: string;
+            code?: string;
+            units?: number;
+            credits?: number;
+            lectureHours?: number;
+            labHours?: number;
+            description?: string;
+            subjectType?: string;
+            gradeLevelId?: string;
+            departmentId?: string;
+            prerequisiteIds?: string[];
+            corequisiteIds?: string[];
+        },
+    ) {
+        return {
+            success: true,
+            data: await this.subjectsService.update(id, body as any),
+            message: 'Subject updated successfully',
+        };
+    }
+
+    @Roles('ADMIN')
+    @Delete(':id')
+    async remove(@Param('id') id: string) {
+        await this.subjectsService.remove(id);
+        return {
+            success: true,
+            message: 'Subject deleted successfully',
         };
     }
 }

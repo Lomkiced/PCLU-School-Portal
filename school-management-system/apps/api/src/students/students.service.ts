@@ -1,6 +1,7 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentStatus } from '@sms/database';
+import { Gender } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -48,7 +49,7 @@ export class StudentsService {
                             firstName: data.student.firstName,
                             lastName: data.student.lastName,
                             birthdate: new Date('2000-01-01'), // Placeholder
-                            gender: data.student.gender,
+                            gender: data.student.gender as Gender,
                             address: 'N/A',
                             guardianName: `${data.parent.firstName} ${data.parent.lastName}`,
                             guardianRelation: data.parent.occupation,
@@ -76,7 +77,7 @@ export class StudentsService {
                             lastName: data.parent.lastName,
                             contactNumber: data.parent.contactNumber,
                             students: {
-                                connect: [{ id: user.studentProfile!.id }],
+                                connect: [{ id: (user as any).studentProfile!.id }],
                             },
                         },
                     },

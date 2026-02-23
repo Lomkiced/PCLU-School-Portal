@@ -61,7 +61,7 @@ async function main() {
                         firstName: `Teacher${i}`,
                         lastName: 'Faculty',
                         birthdate: new Date('1985-01-01'),
-                        gender: i % 2 === 0 ? 'M' : 'F',
+                        gender: i % 2 === 0 ? 'Male' : 'Female',
                         address: 'City',
                         contactNumber: '09000000000',
                         position: 'Teacher I',
@@ -88,9 +88,9 @@ async function main() {
     const sec9A = await prisma.section.create({ data: { name: 'Ruby', capacity: 35, gradeLevelId: g9.id, adviserId: teachers[2].teacherProfile!.id, roomId: room1.id } });
 
     console.log('Creating Subjects & Prerequisites...');
-    const math7 = await prisma.subject.create({ data: { name: 'Math 7', code: 'MTH7', units: 3, subjectType: SubjectType.CORE, gradeLevelId: g7.id } });
-    const math8 = await prisma.subject.create({ data: { name: 'Math 8', code: 'MTH8', units: 3, subjectType: SubjectType.CORE, gradeLevelId: g8.id, prerequisites: { connect: [{ id: math7.id }] } } });
-    const sci7 = await prisma.subject.create({ data: { name: 'Science 7', code: 'SCI7', units: 3, subjectType: SubjectType.CORE, gradeLevelId: g7.id } });
+    const math7 = await prisma.subject.create({ data: { name: 'Math 7', code: 'MTH7', units: 3, subjectType: SubjectType.CORE, gradeLevelId: g7.id, departmentId: deptMath.id } });
+    const math8 = await prisma.subject.create({ data: { name: 'Math 8', code: 'MTH8', units: 3, subjectType: SubjectType.CORE, gradeLevelId: g8.id, departmentId: deptMath.id, prerequisites: { connect: [{ id: math7.id }] } } });
+    const sci7 = await prisma.subject.create({ data: { name: 'Science 7', code: 'SCI7', units: 3, subjectType: SubjectType.CORE, gradeLevelId: g7.id, departmentId: deptSci.id } });
 
     console.log('Creating Students (30 ttl)...');
     const sections = [sec7A, sec8A, sec9A];
@@ -111,7 +111,7 @@ async function main() {
                             firstName: `Student${studentCounter}`,
                             lastName: 'Doe',
                             birthdate: new Date('2010-01-01'),
-                            gender: i % 2 === 0 ? 'M' : 'F',
+                            gender: i % 2 === 0 ? 'MALE' : 'FEMALE',
                             address: 'Student Ave',
                             guardianName: 'Parent Doe',
                             guardianRelation: 'MTH',

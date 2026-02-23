@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubjectType } from '@sms/database';
 
@@ -10,12 +10,21 @@ export class SubjectsService {
         name: string;
         code: string;
         units: number;
+        credits?: number;
+        lectureHours?: number;
+        labHours?: number;
         description?: string;
         subjectType: SubjectType;
         gradeLevelId?: string;
+        departmentId?: string;
         prerequisiteIds?: string[];
         corequisiteIds?: string[];
     }) {
+        // Check for duplicate code
+        const existing = await this.prisma.subject.findUnique({ where: { code: data.code } });
+        if (existing) throw new BadRequestException(`Subject code "${data.code}" already exists`);
+
+        // Cycle detection
         if (data.prerequisiteIds && data.prerequisiteIds.length > 0) {
             await this.checkPrerequisiteCycle(data.code, data.prerequisiteIds);
         }
@@ -25,13 +34,73 @@ export class SubjectsService {
                 name: data.name,
                 code: data.code,
                 units: data.units,
+                credits: data.credits ?? data.units,
+                lectureHours: data.lectureHours ?? 3,
+                labHours: data.labHours ?? 0,
                 description: data.description,
                 subjectType: data.subjectType,
-                gradeLevelId: data.gradeLevelId,
-                prerequisites: data.prerequisiteIds ? { connect: data.prerequisiteIds.map(id => ({ id })) } : undefined,
-                corequisites: data.corequisiteIds ? { connect: data.corequisiteIds.map(id => ({ id })) } : undefined,
+                gradeLevelId: data.gradeLevelId || undefined,
+                departmentId: data.departmentId || undefined,
+                prerequisites: data.prerequisiteIds?.length ? { connect: data.prerequisiteIds.map(id => ({ id })) } : undefined,
+                corequisites: data.corequisiteIds?.length ? { connect: data.corequisiteIds.map(id => ({ id })) } : undefined,
             },
-            include: { prerequisites: true, corequisites: true }
+            include: { prerequisites: true, corequisites: true, department: true, gradeLevel: true },
+        });
+    }
+
+    async update(id: string, data: {
+        name?: string;
+        code?: string;
+        units?: number;
+        credits?: number;
+        lectureHours?: number;
+        labHours?: number;
+        description?: string;
+        subjectType?: SubjectType;
+        gradeLevelId?: string;
+        departmentId?: string;
+        prerequisiteIds?: string[];
+        corequisiteIds?: string[];
+    }) {
+        const subject = await this.prisma.subject.findUnique({ where: { id } });
+        if (!subject) throw new NotFoundException('Subject not found');
+
+        // Code uniqueness check
+        if (data.code && data.code !== subject.code) {
+            const dup = await this.prisma.subject.findUnique({ where: { code: data.code } });
+            if (dup) throw new BadRequestException(`Subject code "${data.code}" already exists`);
+        }
+
+        // Cycle detection
+        if (data.prerequisiteIds && data.prerequisiteIds.length > 0) {
+            await this.checkPrerequisiteCycle(data.code || subject.code, data.prerequisiteIds, id);
+        }
+
+        // Build update payload
+        const updateData: any = {};
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.code !== undefined) updateData.code = data.code;
+        if (data.units !== undefined) updateData.units = data.units;
+        if (data.credits !== undefined) updateData.credits = data.credits;
+        if (data.lectureHours !== undefined) updateData.lectureHours = data.lectureHours;
+        if (data.labHours !== undefined) updateData.labHours = data.labHours;
+        if (data.description !== undefined) updateData.description = data.description;
+        if (data.subjectType !== undefined) updateData.subjectType = data.subjectType;
+        if (data.gradeLevelId !== undefined) updateData.gradeLevelId = data.gradeLevelId || null;
+        if (data.departmentId !== undefined) updateData.departmentId = data.departmentId || null;
+
+        // Sync prerequisites: set (replace all)
+        if (data.prerequisiteIds !== undefined) {
+            updateData.prerequisites = { set: data.prerequisiteIds.map(pid => ({ id: pid })) };
+        }
+        if (data.corequisiteIds !== undefined) {
+            updateData.corequisites = { set: data.corequisiteIds.map(pid => ({ id: pid })) };
+        }
+
+        return this.prisma.subject.update({
+            where: { id },
+            data: updateData,
+            include: { prerequisites: true, corequisites: true, department: true, gradeLevel: true },
         });
     }
 
@@ -78,9 +147,41 @@ export class SubjectsService {
         return this.prisma.subject.findMany({
             include: {
                 gradeLevel: true,
-                prerequisites: true,
-                corequisites: true
-            }
+                department: true,
+                prerequisites: { select: { id: true, name: true, code: true } },
+                corequisites: { select: { id: true, name: true, code: true } },
+            },
+            orderBy: { code: 'asc' },
         });
+    }
+
+    async findOne(id: string) {
+        const subject = await this.prisma.subject.findUnique({
+            where: { id },
+            include: {
+                gradeLevel: true,
+                department: true,
+                prerequisites: true,
+                corequisites: true,
+            },
+        });
+        if (!subject) throw new NotFoundException('Subject not found');
+        return subject;
+    }
+
+    async remove(id: string) {
+        const subject = await this.prisma.subject.findUnique({ where: { id } });
+        if (!subject) throw new NotFoundException('Subject not found');
+
+        // Remove all relational links first
+        await this.prisma.subject.update({
+            where: { id },
+            data: {
+                prerequisites: { set: [] },
+                corequisites: { set: [] },
+            },
+        });
+
+        return this.prisma.subject.delete({ where: { id } });
     }
 }
