@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -72,6 +72,38 @@ export class StudentsController {
                 sectionId: body.sectionId,
             }),
             message: 'Student enrolled successfully',
+        };
+    }
+
+    @Roles('ADMIN')
+    @Patch(':id')
+    async update(
+        @Param('id') id: string,
+        @Body() body: {
+            firstName?: string;
+            lastName?: string;
+            gender?: string;
+            email?: string;
+            parentFirstName?: string;
+            parentLastName?: string;
+            parentContactNumber?: string;
+            parentOccupation?: string;
+        },
+    ) {
+        return {
+            success: true,
+            data: await this.studentsService.updateStudent(id, body),
+            message: 'Student updated successfully',
+        };
+    }
+
+    @Roles('ADMIN')
+    @Delete(':id')
+    async remove(@Param('id') id: string) {
+        await this.studentsService.deleteStudent(id);
+        return {
+            success: true,
+            message: 'Student permanently deleted',
         };
     }
 }

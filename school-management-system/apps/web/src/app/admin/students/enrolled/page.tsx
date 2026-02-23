@@ -6,8 +6,11 @@ import Link from "next/link";
 import {
     ChevronRight, Home, Search, Loader2, AlertCircle,
     ChevronUp, ChevronDown, ChevronsUpDown, UserCheck, User, Plus,
+    Pencil, Trash2,
 } from "lucide-react";
 import { AddStudentModal } from "@/components/add-student-modal";
+import { EditStudentModal } from "@/components/edit-student-modal";
+import { DeleteStudentModal } from "@/components/delete-student-modal";
 
 interface Student {
     id: string;
@@ -34,6 +37,8 @@ export default function EnrolledStudentsPage() {
     const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
     const [currentPage, setCurrentPage] = useState(1);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [editStudent, setEditStudent] = useState<Student | null>(null);
+    const [deleteStudent, setDeleteStudent] = useState<Student | null>(null);
     const pageSize = 15;
 
     const fetchStudents = () => {
@@ -155,6 +160,7 @@ export default function EnrolledStudentsPage() {
                                         Status <SortIcon field="enrollmentStatus" />
                                     </button>
                                 </th>
+                                <th className="text-right px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -172,8 +178,8 @@ export default function EnrolledStudentsPage() {
                                     <td className="px-4 py-3 hidden md:table-cell text-xs text-[hsl(var(--muted-foreground))]">{s.user.email}</td>
                                     <td className="px-4 py-3 hidden lg:table-cell">
                                         <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${s.gender === "MALE" ? "bg-blue-500/10 text-blue-500" :
-                                                s.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500" :
-                                                    "bg-gray-500/10 text-gray-500"
+                                            s.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500" :
+                                                "bg-gray-500/10 text-gray-500"
                                             }`}>
                                             {s.gender}
                                         </span>
@@ -188,11 +194,29 @@ export default function EnrolledStudentsPage() {
                                             {s.enrollmentStatus}
                                         </span>
                                     </td>
+                                    <td className="px-4 py-3 text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                onClick={() => setEditStudent(s)}
+                                                className="p-2 rounded-lg hover:bg-amber-500/10 text-[hsl(var(--muted-foreground))] hover:text-amber-500 transition-colors"
+                                                title="Edit student"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setDeleteStudent(s)}
+                                                className="p-2 rounded-lg hover:bg-red-500/10 text-[hsl(var(--muted-foreground))] hover:text-red-500 transition-colors"
+                                                title="Delete student"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                             {paginated.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
+                                    <td colSpan={9} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
                                         <UserCheck className="w-8 h-8 mx-auto mb-2 opacity-30" />
                                         <p className="font-medium">{search ? "No students match your search" : "No enrolled students found"}</p>
                                     </td>
@@ -219,11 +243,23 @@ export default function EnrolledStudentsPage() {
                 )}
             </div>
 
-            {/* Add Student Modal */}
+            {/* Modals */}
             <AddStudentModal
                 open={showAddModal}
                 onClose={() => setShowAddModal(false)}
                 onSuccess={() => { setShowAddModal(false); fetchStudents(); }}
+            />
+            <EditStudentModal
+                open={!!editStudent}
+                student={editStudent}
+                onClose={() => setEditStudent(null)}
+                onSuccess={() => { setEditStudent(null); fetchStudents(); }}
+            />
+            <DeleteStudentModal
+                open={!!deleteStudent}
+                student={deleteStudent}
+                onClose={() => setDeleteStudent(null)}
+                onSuccess={() => { setDeleteStudent(null); fetchStudents(); }}
             />
         </div>
     );

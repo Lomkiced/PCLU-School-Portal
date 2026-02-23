@@ -6,9 +6,12 @@ import Link from "next/link";
 import {
     ChevronRight, Home, Search, Loader2,
     ChevronUp, ChevronDown, ChevronsUpDown, UserX, User, Plus, GraduationCap,
+    Pencil, Trash2,
 } from "lucide-react";
 import { AddStudentModal } from "@/components/add-student-modal";
 import { AssignSectionModal } from "@/components/assign-section-modal";
+import { EditStudentModal } from "@/components/edit-student-modal";
+import { DeleteStudentModal } from "@/components/delete-student-modal";
 
 interface Student {
     id: string;
@@ -42,6 +45,8 @@ export default function UnenrolledStudentsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [showAddModal, setShowAddModal] = useState(false);
     const [assignStudent, setAssignStudent] = useState<Student | null>(null);
+    const [editStudent, setEditStudent] = useState<Student | null>(null);
+    const [deleteStudentTarget, setDeleteStudentTarget] = useState<Student | null>(null);
     const pageSize = 15;
 
     const fetchStudents = () => {
@@ -174,8 +179,8 @@ export default function UnenrolledStudentsPage() {
                                     <td className="px-4 py-3 hidden md:table-cell text-xs text-[hsl(var(--muted-foreground))]">{s.user.email}</td>
                                     <td className="px-4 py-3 hidden lg:table-cell">
                                         <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${s.gender === "MALE" ? "bg-blue-500/10 text-blue-500" :
-                                                s.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500" :
-                                                    "bg-gray-500/10 text-gray-500"
+                                            s.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500" :
+                                                "bg-gray-500/10 text-gray-500"
                                             }`}>
                                             {s.gender}
                                         </span>
@@ -189,12 +194,28 @@ export default function UnenrolledStudentsPage() {
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <button
-                                            onClick={() => setAssignStudent(s)}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs font-bold hover:bg-emerald-500/20 transition-colors"
-                                        >
-                                            <GraduationCap className="w-3.5 h-3.5" /> Assign Section
-                                        </button>
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                onClick={() => setAssignStudent(s)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs font-bold hover:bg-emerald-500/20 transition-colors"
+                                            >
+                                                <GraduationCap className="w-3.5 h-3.5" /> Enroll
+                                            </button>
+                                            <button
+                                                onClick={() => setEditStudent(s)}
+                                                className="p-2 rounded-lg hover:bg-amber-500/10 text-[hsl(var(--muted-foreground))] hover:text-amber-500 transition-colors"
+                                                title="Edit student"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setDeleteStudentTarget(s)}
+                                                className="p-2 rounded-lg hover:bg-red-500/10 text-[hsl(var(--muted-foreground))] hover:text-red-500 transition-colors"
+                                                title="Delete student"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -239,6 +260,22 @@ export default function UnenrolledStudentsPage() {
                 student={assignStudent}
                 onClose={() => setAssignStudent(null)}
                 onSuccess={() => { setAssignStudent(null); fetchStudents(); }}
+            />
+
+            {/* Edit Student Modal */}
+            <EditStudentModal
+                open={!!editStudent}
+                student={editStudent}
+                onClose={() => setEditStudent(null)}
+                onSuccess={() => { setEditStudent(null); fetchStudents(); }}
+            />
+
+            {/* Delete Student Modal */}
+            <DeleteStudentModal
+                open={!!deleteStudentTarget}
+                student={deleteStudentTarget}
+                onClose={() => setDeleteStudentTarget(null)}
+                onSuccess={() => { setDeleteStudentTarget(null); fetchStudents(); }}
             />
         </div>
     );
