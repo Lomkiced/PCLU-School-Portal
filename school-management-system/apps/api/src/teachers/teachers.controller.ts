@@ -2,7 +2,6 @@ import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/co
 import { TeachersService } from './teachers.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Role } from '@sms/types';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -21,6 +20,22 @@ export class TeachersController {
     }
 
     @Roles('ADMIN')
+    @Post('add')
+    async addFaculty(@Body() body: {
+        firstName: string;
+        lastName: string;
+        email: string;
+        position: string;
+        departmentId: string;
+    }) {
+        return {
+            success: true,
+            data: await this.teachersService.addFaculty(body),
+            message: 'Faculty member added successfully',
+        };
+    }
+
+    @Roles('ADMIN', 'TEACHER')
     @Get()
     async findAll(
         @Query('search') search: string,
