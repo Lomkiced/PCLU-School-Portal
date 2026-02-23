@@ -14,28 +14,40 @@ interface FormData {
     studentFirstName: string;
     studentLastName: string;
     studentEmail: string;
+    studentGender: string;
     parentFirstName: string;
     parentLastName: string;
     parentOccupation: string;
+    parentContactNumber: string;
 }
 
 interface FormErrors {
     studentFirstName?: string;
     studentLastName?: string;
     studentEmail?: string;
+    studentGender?: string;
     parentFirstName?: string;
     parentLastName?: string;
     parentOccupation?: string;
+    parentContactNumber?: string;
 }
 
 const initialFormData: FormData = {
     studentFirstName: "",
     studentLastName: "",
     studentEmail: "",
+    studentGender: "",
     parentFirstName: "",
     parentLastName: "",
     parentOccupation: "",
+    parentContactNumber: "",
 };
+
+const genderOptions = [
+    { value: "MALE", label: "Male" },
+    { value: "FEMALE", label: "Female" },
+    { value: "OTHER", label: "Other" },
+];
 
 export function AddStudentModal({ open, onClose, onSuccess }: AddStudentModalProps) {
     const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -55,9 +67,15 @@ export function AddStudentModal({ open, onClose, onSuccess }: AddStudentModalPro
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.studentEmail)) {
             newErrors.studentEmail = "Enter a valid email address";
         }
+        if (!formData.studentGender) newErrors.studentGender = "Gender is required";
         if (!formData.parentFirstName.trim()) newErrors.parentFirstName = "Parent first name is required";
         if (!formData.parentLastName.trim()) newErrors.parentLastName = "Parent last name is required";
         if (!formData.parentOccupation.trim()) newErrors.parentOccupation = "Occupation is required";
+        if (!formData.parentContactNumber.trim()) {
+            newErrors.parentContactNumber = "Contact number is required";
+        } else if (formData.parentContactNumber.trim().length < 7) {
+            newErrors.parentContactNumber = "Contact number must be at least 7 digits";
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -81,11 +99,13 @@ export function AddStudentModal({ open, onClose, onSuccess }: AddStudentModalPro
                     firstName: formData.studentFirstName.trim(),
                     lastName: formData.studentLastName.trim(),
                     email: formData.studentEmail.trim().toLowerCase(),
+                    gender: formData.studentGender,
                 },
                 parent: {
                     firstName: formData.parentFirstName.trim(),
                     lastName: formData.parentLastName.trim(),
                     occupation: formData.parentOccupation.trim(),
+                    contactNumber: formData.parentContactNumber.trim(),
                 },
             });
             setFormData(initialFormData);
@@ -174,16 +194,32 @@ export function AddStudentModal({ open, onClose, onSuccess }: AddStudentModalPro
                                 {errors.studentLastName && <p className="text-xs text-red-500">{errors.studentLastName}</p>}
                             </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">Email Address *</label>
-                            <input
-                                type="email"
-                                className={inputClass("studentEmail")}
-                                placeholder="juan.delacruz@pclu.edu.ph"
-                                value={formData.studentEmail}
-                                onChange={(e) => handleChange("studentEmail", e.target.value)}
-                            />
-                            {errors.studentEmail && <p className="text-xs text-red-500">{errors.studentEmail}</p>}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">Email Address *</label>
+                                <input
+                                    type="email"
+                                    className={inputClass("studentEmail")}
+                                    placeholder="juan@pclu.edu.ph"
+                                    value={formData.studentEmail}
+                                    onChange={(e) => handleChange("studentEmail", e.target.value)}
+                                />
+                                {errors.studentEmail && <p className="text-xs text-red-500">{errors.studentEmail}</p>}
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">Gender *</label>
+                                <select
+                                    className={inputClass("studentGender")}
+                                    value={formData.studentGender}
+                                    onChange={(e) => handleChange("studentGender", e.target.value)}
+                                >
+                                    <option value="">Select gender</option>
+                                    {genderOptions.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                                {errors.studentGender && <p className="text-xs text-red-500">{errors.studentGender}</p>}
+                            </div>
                         </div>
                     </div>
 
@@ -217,15 +253,28 @@ export function AddStudentModal({ open, onClose, onSuccess }: AddStudentModalPro
                                 {errors.parentLastName && <p className="text-xs text-red-500">{errors.parentLastName}</p>}
                             </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">Occupation *</label>
-                            <input
-                                className={inputClass("parentOccupation")}
-                                placeholder="e.g. Teacher, Engineer, Business Owner"
-                                value={formData.parentOccupation}
-                                onChange={(e) => handleChange("parentOccupation", e.target.value)}
-                            />
-                            {errors.parentOccupation && <p className="text-xs text-red-500">{errors.parentOccupation}</p>}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">Occupation *</label>
+                                <input
+                                    className={inputClass("parentOccupation")}
+                                    placeholder="e.g. Teacher, Engineer"
+                                    value={formData.parentOccupation}
+                                    onChange={(e) => handleChange("parentOccupation", e.target.value)}
+                                />
+                                {errors.parentOccupation && <p className="text-xs text-red-500">{errors.parentOccupation}</p>}
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">Contact Number *</label>
+                                <input
+                                    type="tel"
+                                    className={inputClass("parentContactNumber")}
+                                    placeholder="09171234567"
+                                    value={formData.parentContactNumber}
+                                    onChange={(e) => handleChange("parentContactNumber", e.target.value)}
+                                />
+                                {errors.parentContactNumber && <p className="text-xs text-red-500">{errors.parentContactNumber}</p>}
+                            </div>
                         </div>
                     </div>
 

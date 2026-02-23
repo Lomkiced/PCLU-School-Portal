@@ -32,6 +32,7 @@ export class SectionsService {
                 students: {
                     include: {
                         user: { select: { email: true, profilePicture: true } },
+                        parents: { select: { firstName: true, lastName: true, contactNumber: true } },
                     },
                     orderBy: { lastName: 'asc' },
                 },

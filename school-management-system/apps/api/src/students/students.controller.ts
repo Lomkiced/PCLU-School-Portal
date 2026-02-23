@@ -12,8 +12,8 @@ export class StudentsController {
     @Roles('ADMIN')
     @Post()
     async create(@Body() body: {
-        student: { firstName: string; lastName: string; email: string };
-        parent: { firstName: string; lastName: string; occupation: string };
+        student: { firstName: string; lastName: string; email: string; gender: string };
+        parent: { firstName: string; lastName: string; occupation: string; contactNumber: string };
     }) {
         return {
             success: true,

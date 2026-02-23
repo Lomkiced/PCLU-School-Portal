@@ -54,7 +54,7 @@ model StudentProfile {
   lastName         String
   middleName       String?
   birthdate        DateTime
-  gender           String
+  gender           Gender
   address          String
   
   guardianName     String
@@ -79,6 +79,12 @@ model StudentProfile {
   quizSubmissions  QuizSubmission[]
   activitySubs     ActivitySubmission[]
   fees             StudentFee[]
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum EnrollmentStatus {

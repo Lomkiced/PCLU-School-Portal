@@ -12,8 +12,8 @@ export class StudentsService {
      * Default password: "student123" (bcrypt hashed).
      */
     async createStudentWithParent(data: {
-        student: { firstName: string; lastName: string; email: string };
-        parent: { firstName: string; lastName: string; occupation: string };
+        student: { firstName: string; lastName: string; email: string; gender: string };
+        parent: { firstName: string; lastName: string; occupation: string; contactNumber: string };
     }) {
         // Check for duplicate email
         const existingUser = await this.prisma.user.findUnique({
@@ -48,11 +48,11 @@ export class StudentsService {
                             firstName: data.student.firstName,
                             lastName: data.student.lastName,
                             birthdate: new Date('2000-01-01'), // Placeholder
-                            gender: 'N/A',
+                            gender: data.student.gender,
                             address: 'N/A',
                             guardianName: `${data.parent.firstName} ${data.parent.lastName}`,
                             guardianRelation: data.parent.occupation,
-                            guardianContact: 'N/A',
+                            guardianContact: data.parent.contactNumber,
                             enrollmentStatus: EnrollmentStatus.PENDING,
                         },
                     },
@@ -74,7 +74,7 @@ export class StudentsService {
                         create: {
                             firstName: data.parent.firstName,
                             lastName: data.parent.lastName,
-                            contactNumber: 'N/A',
+                            contactNumber: data.parent.contactNumber,
                             students: {
                                 connect: [{ id: user.studentProfile!.id }],
                             },
@@ -109,6 +109,7 @@ export class StudentsService {
                 user: { select: { email: true } },
                 gradeLevel: true,
                 section: true,
+                parents: { select: { firstName: true, lastName: true, contactNumber: true } },
             },
             orderBy: { lastName: 'asc' },
         });
@@ -142,6 +143,7 @@ export class StudentsService {
                 user: { select: { email: true } },
                 gradeLevel: true,
                 section: true,
+                parents: { select: { firstName: true, lastName: true, contactNumber: true } },
             },
             orderBy: { lastName: 'asc' },
         });
@@ -161,7 +163,7 @@ export class StudentsService {
                     ],
                 }
                 : undefined,
-            include: { gradeLevel: true, section: true, user: { select: { email: true } } },
+            include: { gradeLevel: true, section: true, user: { select: { email: true } }, parents: { select: { firstName: true, lastName: true, contactNumber: true } } },
             orderBy: { lastName: 'asc' },
         });
     }

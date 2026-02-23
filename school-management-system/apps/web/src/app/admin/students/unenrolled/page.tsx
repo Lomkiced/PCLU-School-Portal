@@ -21,6 +21,7 @@ interface Student {
     user: { email: string };
     gradeLevel: { name: string } | null;
     section: { name: string } | null;
+    parents: { firstName: string; lastName: string; contactNumber: string }[];
 }
 
 type SortField = "lastName" | "studentId" | "enrollmentStatus";
@@ -148,6 +149,8 @@ export default function UnenrolledStudentsPage() {
                                     </button>
                                 </th>
                                 <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] hidden md:table-cell">Email</th>
+                                <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] hidden lg:table-cell">Gender</th>
+                                <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] hidden lg:table-cell">Parent Contact</th>
                                 <th className="text-left px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))]">
                                     <button onClick={() => handleSort("enrollmentStatus")} className="flex items-center gap-1 hover:text-[hsl(var(--foreground))]">
                                         Status <SortIcon field="enrollmentStatus" />
@@ -169,6 +172,17 @@ export default function UnenrolledStudentsPage() {
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 hidden md:table-cell text-xs text-[hsl(var(--muted-foreground))]">{s.user.email}</td>
+                                    <td className="px-4 py-3 hidden lg:table-cell">
+                                        <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${s.gender === "MALE" ? "bg-blue-500/10 text-blue-500" :
+                                                s.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500" :
+                                                    "bg-gray-500/10 text-gray-500"
+                                            }`}>
+                                            {s.gender}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-[hsl(var(--muted-foreground))]">
+                                        {s.parents?.[0]?.contactNumber || "—"}
+                                    </td>
                                     <td className="px-4 py-3">
                                         <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${statusColors[s.enrollmentStatus] || "bg-gray-500/10 text-gray-500"}`}>
                                             {s.enrollmentStatus}
@@ -186,7 +200,7 @@ export default function UnenrolledStudentsPage() {
                             ))}
                             {paginated.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
+                                    <td colSpan={7} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
                                         <UserX className="w-8 h-8 mx-auto mb-2 opacity-30" />
                                         <p className="font-medium">{search ? "No students match your search" : "No unenrolled students found"}</p>
                                     </td>

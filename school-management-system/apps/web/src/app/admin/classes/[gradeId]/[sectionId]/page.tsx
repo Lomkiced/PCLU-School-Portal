@@ -20,6 +20,7 @@ interface Student {
     guardianName: string;
     guardianContact: string;
     user: { email: string; profilePicture: string | null };
+    parents: { firstName: string; lastName: string; contactNumber: string }[];
 }
 
 interface SectionDetail {
@@ -232,8 +233,11 @@ export default function SectionDetailPage() {
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 hidden md:table-cell">
-                                        <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${student.gender === "M" ? "bg-blue-500/10 text-blue-500" : "bg-pink-500/10 text-pink-500"}`}>
-                                            {student.gender === "M" ? "Male" : "Female"}
+                                        <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${student.gender === "MALE" ? "bg-blue-500/10 text-blue-500" :
+                                                student.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500" :
+                                                    "bg-gray-500/10 text-gray-500"
+                                            }`}>
+                                            {student.gender === "MALE" ? "Male" : student.gender === "FEMALE" ? "Female" : student.gender === "OTHER" ? "Other" : student.gender}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 hidden lg:table-cell">
@@ -243,8 +247,8 @@ export default function SectionDetailPage() {
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 hidden lg:table-cell text-xs text-[hsl(var(--muted-foreground))]">
-                                        <p>{student.guardianName}</p>
-                                        <p>{student.guardianContact}</p>
+                                        <p className="font-medium">{student.parents?.[0] ? `${student.parents[0].firstName} ${student.parents[0].lastName}` : student.guardianName}</p>
+                                        <p>{student.parents?.[0]?.contactNumber || student.guardianContact}</p>
                                     </td>
                                     <td className="px-4 py-3">
                                         <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${statusColors[student.enrollmentStatus] || "bg-gray-500/10 text-gray-500"}`}>
