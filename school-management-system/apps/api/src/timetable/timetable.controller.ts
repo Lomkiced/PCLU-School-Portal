@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Delete } from '@nestjs/common';
 import { TimetableService } from './timetable.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -65,6 +65,29 @@ export class TimetableController {
         return {
             success: true,
             data: await this.timetableService.updateTimeslot(id, body)
+        };
+    }
+
+    @Roles('ADMIN', 'TEACHER')
+    @Post('sections/:sectionId')
+    async createTimeslot(
+        @Param('sectionId') sectionId: string,
+        @Body() body: any
+    ) {
+        return {
+            success: true,
+            data: await this.timetableService.createTimeslot(sectionId, body),
+            message: 'Timeslot created successfully'
+        };
+    }
+
+    @Roles('ADMIN')
+    @Delete('timeslot/:id')
+    async deleteTimeslot(@Param('id') id: string) {
+        await this.timetableService.deleteTimeslot(id);
+        return {
+            success: true,
+            message: 'Timeslot deleted successfully'
         };
     }
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TimetableSolver, CSPSolution } from './timetable.solver';
 import { DayOfWeek } from '@sms/database';
@@ -51,21 +51,21 @@ export class TimetableService {
     async getSectionTimetable(sectionId: string) {
         return this.prisma.timetableSlot.findMany({
             where: { sectionId },
-            include: { subject: true, room: true }
+            include: { subject: true, room: true, teacher: true }
         });
     }
 
     async getTeacherTimetable(teacherId: string) {
         return this.prisma.timetableSlot.findMany({
             where: { teacherId },
-            include: { subject: true, section: true, room: true }
+            include: { subject: true, section: true, room: true, teacher: true }
         });
     }
 
     async getRoomTimetable(roomId: string) {
         return this.prisma.timetableSlot.findMany({
             where: { roomId },
-            include: { subject: true, section: true }
+            include: { subject: true, section: true, room: true, teacher: true }
         });
     }
 
@@ -75,7 +75,13 @@ export class TimetableService {
         });
     }
 
-    async updateTimeslot(id: string, data: { dayOfWeek: DayOfWeek; startTime: string; endTime: string; roomId: string }) {
+    async updateTimeslot(id: string, data: { dayOfWeek: DayOfWeek; startTime: string; endTime: string; roomId: string; teacherId?: string }) {
+        const slot = await this.prisma.timetableSlot.findUnique({ where: { id } });
+        if (!slot) throw new NotFoundException('Timeslot not found');
+
+        const teacherId = data.teacherId || slot.teacherId;
+        await this.checkConflict(teacherId, data.roomId, data.dayOfWeek, data.startTime, data.endTime, id);
+
         return this.prisma.timetableSlot.update({
             where: { id },
             data: {
@@ -83,7 +89,72 @@ export class TimetableService {
                 startTime: data.startTime,
                 endTime: data.endTime,
                 roomId: data.roomId,
+                ...(data.teacherId ? { teacherId: data.teacherId } : {})
             }
         });
+    }
+
+    private async checkConflict(teacherId: string, roomId: string, dayOfWeek: DayOfWeek, startTime: string, endTime: string, currentTimeslotId?: string) {
+        const existingSlots = await this.prisma.timetableSlot.findMany({
+            where: {
+                OR: [
+                    { teacherId },
+                    { roomId }
+                ],
+                dayOfWeek,
+                ...(currentTimeslotId ? { id: { not: currentTimeslotId } } : {})
+            },
+            include: { section: true, teacher: true, room: true }
+        });
+
+        for (const slot of existingSlots) {
+            // Check for overlap: start1 < end2 AND end1 > start2
+            if (startTime < slot.endTime && endTime > slot.startTime) {
+                if (slot.teacherId === teacherId) {
+                    throw new BadRequestException(`Teacher ${slot.teacher.firstName} ${slot.teacher.lastName} is already booked for Section ${slot.section.name} at this time.`);
+                }
+                if (slot.roomId === roomId) {
+                    throw new BadRequestException(`Room ${slot.room.name} is already booked for Section ${slot.section.name} at this time.`);
+                }
+            }
+        }
+    }
+
+    async createTimeslot(sectionId: string, data: { dayOfWeek: DayOfWeek, startTime: string, endTime: string, subjectId: string, teacherId: string, roomId: string, academicYearId: string }) {
+        await this.checkConflict(data.teacherId, data.roomId, data.dayOfWeek, data.startTime, data.endTime);
+
+        let timetable = await this.prisma.timetable.findFirst({
+            where: { academicYearId: data.academicYearId }
+        });
+
+        if (!timetable) {
+            const ay = await this.prisma.academicYear.findUnique({ where: { id: data.academicYearId } });
+            if (!ay) throw new NotFoundException('Academic Year not found');
+            timetable = await this.prisma.timetable.create({
+                data: {
+                    name: `Master Schedule - ${ay.label}`,
+                    academicYearId: ay.id,
+                    status: 'DRAFT'
+                }
+            });
+        }
+
+        return this.prisma.timetableSlot.create({
+            data: {
+                timetableId: timetable.id,
+                sectionId,
+                subjectId: data.subjectId,
+                teacherId: data.teacherId,
+                roomId: data.roomId,
+                dayOfWeek: data.dayOfWeek,
+                startTime: data.startTime,
+                endTime: data.endTime
+            },
+            include: { subject: true, teacher: true, room: true, section: true }
+        });
+    }
+
+    async deleteTimeslot(id: string) {
+        return this.prisma.timetableSlot.delete({ where: { id } });
     }
 }
