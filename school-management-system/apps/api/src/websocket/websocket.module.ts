@@ -7,5 +7,6 @@ import { GroupChatsModule } from '../group-chats/group-chats.module';
 @Module({
     imports: [JwtModule.register({}), MessagesModule, GroupChatsModule],
     providers: [AppGateway],
+    exports: [AppGateway],
 })
 export class WebsocketModule { }

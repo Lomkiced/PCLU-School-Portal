@@ -119,6 +119,7 @@ model TeacherProfile {
   sectionSubjects SectionSubject[]
   quizzes       Quiz[]
   activities    Activity[]
+  timetableSlots TimetableSlot[]
 }
 
 model ParentProfile {
@@ -166,6 +167,7 @@ model AcademicYear {
   sectionSubjects SectionSubject[]
   fees        FeeStructure[]
   grades      Grade[]
+  timetables  Timetable[]
 }
 
 model Department {
@@ -334,11 +336,18 @@ model SectionSubject {
 // TIMETABLE
 // ==========================================
 
+enum TimetableStatus {
+  DRAFT
+  PUBLISHED
+}
+
 model Timetable {
-  id         String   @id @default(uuid())
-  label      String   // e.g. "Main Timetable SY 24-25"
-  isActive   Boolean  @default(false)
-  slots      TimetableSlot[]
+  id             String          @id @default(uuid())
+  name           String
+  academicYearId String
+  academicYear   AcademicYear    @relation(fields: [academicYearId], references: [id])
+  status         TimetableStatus @default(DRAFT)
+  slots          TimetableSlot[]
 }
 
 enum DayOfWeek {
@@ -361,7 +370,7 @@ model TimetableSlot {
   subject     Subject @relation(fields: [subjectId], references: [id])
   
   teacherId   String
-  // Relation handled loosely via ID or we could link to TeacherProfile directly (skipping the full typed relation to reduce cycles, but let's link it properly if needed)
+  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
   
   roomId      String
   room        Room @relation(fields: [roomId], references: [id])

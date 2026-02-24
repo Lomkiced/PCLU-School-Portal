@@ -46,4 +46,25 @@ export class TimetableController {
             data: await this.timetableService.getRoomTimetable(roomId)
         };
     }
+
+    @Roles('ADMIN')
+    @Get('all')
+    async getAllTimetables() {
+        return {
+            success: true,
+            data: await this.timetableService.getAllTimetables()
+        };
+    }
+
+    @Roles('ADMIN')
+    @Post('timeslot/:id')
+    async updateTimeslot(
+        @Param('id') id: string,
+        @Body() body: any
+    ) {
+        return {
+            success: true,
+            data: await this.timetableService.updateTimeslot(id, body)
+        };
+    }
 }

@@ -28,7 +28,13 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     async handleConnection(client: Socket) {
         try {
-            const token = client.handshake.auth?.token || client.handshake.headers['authorization']?.split(' ')[1];
+            const authHeader = client.handshake.headers['authorization'] || client.handshake.headers['Authorization'];
+            let token = client.handshake.auth?.token;
+
+            if (!token && typeof authHeader === 'string') {
+                token = authHeader.split(' ')[1];
+            }
+
             if (!token) throw new Error('No token provided');
 
             const payload = this.jwtService.verify(token, {

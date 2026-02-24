@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TimetableSolver, CSPSolution } from './timetable.solver';
+import { DayOfWeek } from '@sms/database';
 
 @Injectable()
 export class TimetableService {
@@ -20,12 +21,13 @@ export class TimetableService {
         // 3. Save result to DB
         return this.prisma.$transaction(async (tx) => {
             // Clear existing timetable for this academic year
-            await tx.timetable.deleteMany({ where: { label: { contains: ay.label } } });
+            await tx.timetable.deleteMany({ where: { academicYearId } });
 
             const timetable = await tx.timetable.create({
                 data: {
-                    label: `Master Schedule - ${ay.label}`,
-                    isActive: false,
+                    name: `Master Schedule - ${ay.label}`,
+                    academicYearId: ay.id,
+                    status: 'DRAFT',
                 }
             });
 
@@ -35,7 +37,7 @@ export class TimetableService {
                 teacherId: s.teacherId,
                 roomId: s.roomId,
                 sectionId: s.sectionId,
-                dayOfWeek: s.dayOfWeek as any,
+                dayOfWeek: DayOfWeek[Object.keys(DayOfWeek)[s.dayOfWeek - 1] as keyof typeof DayOfWeek], // 1 = Monday
                 startTime: s.startTime,
                 endTime: s.endTime,
             }));
@@ -64,6 +66,24 @@ export class TimetableService {
         return this.prisma.timetableSlot.findMany({
             where: { roomId },
             include: { subject: true, section: true }
+        });
+    }
+
+    async getAllTimetables() {
+        return this.prisma.timetableSlot.findMany({
+            include: { subject: true, section: true, room: true, teacher: true }
+        });
+    }
+
+    async updateTimeslot(id: string, data: { dayOfWeek: DayOfWeek; startTime: string; endTime: string; roomId: string }) {
+        return this.prisma.timetableSlot.update({
+            where: { id },
+            data: {
+                dayOfWeek: data.dayOfWeek,
+                startTime: data.startTime,
+                endTime: data.endTime,
+                roomId: data.roomId,
+            }
         });
     }
 }
