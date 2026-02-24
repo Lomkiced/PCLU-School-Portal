@@ -199,7 +199,9 @@ export default function DepartmentDetailPage() {
                                             {t.position}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 hidden sm:table-cell text-xs text-[hsl(var(--muted-foreground))]">{t.contactNumber}</td>
+                                    <td className="px-4 py-3 hidden sm:table-cell text-xs text-[hsl(var(--muted-foreground))]">
+                                        {t.contactNumber && t.contactNumber !== 'N/A' ? t.contactNumber : 'N/A'}
+                                    </td>
                                 </tr>
                             ))}
                             {paginated.length === 0 && (

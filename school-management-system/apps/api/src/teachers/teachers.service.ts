@@ -17,6 +17,7 @@ export class TeachersService {
         email: string;
         position: string;
         departmentId: string;
+        contactNumber: string;
     }) {
         // Check for duplicate email
         const existing = await this.prisma.user.findUnique({
@@ -51,7 +52,7 @@ export class TeachersService {
                             birthdate: new Date('1990-01-01'), // Placeholder
                             gender: 'N/A',
                             address: 'N/A',
-                            contactNumber: 'N/A',
+                            contactNumber: data.contactNumber || 'N/A',
                             position: data.position,
                             departmentId: data.departmentId,
                         },

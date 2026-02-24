@@ -17,6 +17,7 @@ interface FormData {
     lastName: string;
     email: string;
     position: string;
+    contactNumber: string;
 }
 
 interface FormErrors {
@@ -24,6 +25,7 @@ interface FormErrors {
     lastName?: string;
     email?: string;
     position?: string;
+    contactNumber?: string;
 }
 
 const initialFormData: FormData = {
@@ -31,6 +33,7 @@ const initialFormData: FormData = {
     lastName: "",
     email: "",
     position: "",
+    contactNumber: "",
 };
 
 export function AddFacultyModal({ open, departmentId, departmentName, onClose, onSuccess }: AddFacultyModalProps) {
@@ -52,6 +55,11 @@ export function AddFacultyModal({ open, departmentId, departmentName, onClose, o
             newErrors.email = "Enter a valid email address";
         }
         if (!formData.position.trim()) newErrors.position = "Position/title is required";
+        if (!formData.contactNumber.trim()) {
+            newErrors.contactNumber = "Contact number is required";
+        } else if (formData.contactNumber.trim().length < 7) {
+            newErrors.contactNumber = "Please enter a valid contact number";
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -75,6 +83,7 @@ export function AddFacultyModal({ open, departmentId, departmentName, onClose, o
                 lastName: formData.lastName.trim(),
                 email: formData.email.trim().toLowerCase(),
                 position: formData.position.trim(),
+                contactNumber: formData.contactNumber.trim(),
                 departmentId,
             });
             setFormData(initialFormData);
@@ -165,15 +174,27 @@ export function AddFacultyModal({ open, departmentId, departmentName, onClose, o
                         {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
                     </div>
 
-                    <div className="space-y-1">
-                        <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">Title / Position *</label>
-                        <input
-                            className={inputClass("position")}
-                            placeholder="e.g. Senior Teacher II, Instructor I"
-                            value={formData.position}
-                            onChange={(e) => handleChange("position", e.target.value)}
-                        />
-                        {errors.position && <p className="text-xs text-red-500">{errors.position}</p>}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">Title / Position *</label>
+                            <input
+                                className={inputClass("position")}
+                                placeholder="e.g. Senior Teacher II"
+                                value={formData.position}
+                                onChange={(e) => handleChange("position", e.target.value)}
+                            />
+                            {errors.position && <p className="text-xs text-red-500">{errors.position}</p>}
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">Contact Number *</label>
+                            <input
+                                className={inputClass("contactNumber")}
+                                placeholder="+63 912 345 6789"
+                                value={formData.contactNumber}
+                                onChange={(e) => handleChange("contactNumber", e.target.value)}
+                            />
+                            {errors.contactNumber && <p className="text-xs text-red-500">{errors.contactNumber}</p>}
+                        </div>
                     </div>
 
                     {/* Default Password Note */}

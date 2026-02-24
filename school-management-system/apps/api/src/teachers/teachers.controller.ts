@@ -27,6 +27,7 @@ export class TeachersController {
         email: string;
         position: string;
         departmentId: string;
+        contactNumber: string;
     }) {
         return {
             success: true,
