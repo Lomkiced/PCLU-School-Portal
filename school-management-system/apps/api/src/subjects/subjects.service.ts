@@ -15,7 +15,7 @@ export class SubjectsService {
         labHours?: number;
         description?: string;
         subjectType: SubjectType;
-        gradeLevelId?: string;
+        gradeLevelId: string;
         departmentId?: string;
         prerequisiteIds?: string[];
         corequisiteIds?: string[];
@@ -39,7 +39,7 @@ export class SubjectsService {
                 labHours: data.labHours ?? 0,
                 description: data.description,
                 subjectType: data.subjectType,
-                gradeLevelId: data.gradeLevelId || undefined,
+                gradeLevelId: data.gradeLevelId,
                 departmentId: data.departmentId || undefined,
                 prerequisites: data.prerequisiteIds?.length ? { connect: data.prerequisiteIds.map(id => ({ id })) } : undefined,
                 corequisites: data.corequisiteIds?.length ? { connect: data.corequisiteIds.map(id => ({ id })) } : undefined,
@@ -143,8 +143,9 @@ export class SubjectsService {
         }
     }
 
-    async findAll() {
+    async findAll(gradeLevelId?: string) {
         return this.prisma.subject.findMany({
+            where: gradeLevelId ? { gradeLevelId } : undefined,
             include: {
                 gradeLevel: true,
                 department: true,

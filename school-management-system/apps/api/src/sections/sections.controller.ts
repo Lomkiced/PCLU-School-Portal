@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, Patch, UseGuards, Req } from '@nestjs/common';
 import { SectionsService } from './sections.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -37,32 +37,36 @@ export class SectionsController {
         };
     }
 
-    @Roles('ADMIN')
-    @Post(':id/subjects')
-    async addSubject(
+    @Roles('ADMIN', 'TEACHER', 'STUDENT')
+    @Get(':id/subjects')
+    async getSubjects(
         @Param('id') id: string,
-        @Body() body: { subjectId: string; teacherId: string; academicYearId: string }
+        @Query('academicYearId') academicYearId?: string
     ) {
-        // In a real app we'd fetch the active academic year if not provided, 
-        // but for this implementation we expect the frontend to pass it (or we hardware it for now)
-        const academicYearId = body.academicYearId || (await this.sectionsService['prisma'].academicYear.findFirst({ where: { isActive: true } }))?.id;
-
-        if (!academicYearId) throw new Error("No active academic year found");
-
         return {
             success: true,
-            data: await this.sectionsService.addSubject(id, { ...body, academicYearId }),
-            message: 'Subject assigned successfully'
+            data: await this.sectionsService.getInheritedSubjects(id, academicYearId),
         };
     }
 
     @Roles('ADMIN')
-    @Delete(':id/subjects/:subjectId')
-    async removeSubject(@Param('id') sectionId: string, @Param('subjectId') subjectId: string) {
-        await this.sectionsService.removeSubject(sectionId, subjectId);
+    @Patch(':id/subjects/:subjectId')
+    async assignTeacher(
+        @Param('id') id: string,
+        @Param('subjectId') subjectId: string,
+        @Body() body: { teacherId: string; academicYearId?: string }
+    ) {
+        let academicYearId = body.academicYearId;
+        if (!academicYearId) {
+            const ay = await this.sectionsService['prisma'].academicYear.findFirst({ where: { isActive: true } });
+            if (!ay) throw new Error("No active academic year found");
+            academicYearId = ay.id;
+        }
+
         return {
             success: true,
-            message: 'Subject removed successfully'
+            data: await this.sectionsService.assignTeacher(id, subjectId, { teacherId: body.teacherId, academicYearId }),
+            message: 'Teacher assigned to subject successfully'
         };
     }
 }

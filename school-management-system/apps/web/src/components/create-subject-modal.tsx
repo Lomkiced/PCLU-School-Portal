@@ -19,6 +19,7 @@ interface CreateSubjectModalProps {
     open: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    gradeLevelId: string;
 }
 
 interface FormData {
@@ -63,7 +64,7 @@ const initialFormData: FormData = {
     prerequisiteIds: [],
 };
 
-export function CreateSubjectModal({ open, onClose, onSuccess }: CreateSubjectModalProps) {
+export function CreateSubjectModal({ open, onClose, onSuccess, gradeLevelId }: CreateSubjectModalProps) {
     const [formData, setFormData] = useState<FormData>(initialFormData);
     const [errors, setErrors] = useState<FormErrors>({});
     const [loading, setLoading] = useState(false);
@@ -123,6 +124,7 @@ export function CreateSubjectModal({ open, onClose, onSuccess }: CreateSubjectMo
                 description: formData.description.trim() || undefined,
                 subjectType: formData.subjectType,
                 departmentId: formData.departmentId || undefined,
+                gradeLevelId: gradeLevelId,
                 prerequisiteIds: formData.prerequisiteIds.length > 0 ? formData.prerequisiteIds : undefined,
             });
             setFormData(initialFormData);

@@ -49,23 +49,64 @@ export class SectionsService {
         return section;
     }
 
-    async addSubject(sectionId: string, data: { subjectId: string; teacherId: string; academicYearId: string }) {
-        // Check for existing assignment
-        const existing = await this.prisma.sectionSubject.findFirst({
-            where: { sectionId, subjectId: data.subjectId, academicYearId: data.academicYearId },
+    async getInheritedSubjects(sectionId: string, academicYearId?: string) {
+        const section = await this.prisma.section.findUnique({
+            where: { id: sectionId },
+            select: { gradeLevelId: true }
         });
 
-        if (existing) {
-            throw new BadRequestException('This subject is already assigned to this section for the current academic year.');
+        if (!section) throw new NotFoundException('Section not found');
+
+        // Get active academic year if not provided
+        if (!academicYearId) {
+            const ay = await this.prisma.academicYear.findFirst({ where: { isActive: true } });
+            if (!ay) throw new BadRequestException('No active academic year found');
+            academicYearId = ay.id;
         }
 
-        return this.prisma.sectionSubject.create({
-            data: {
+        // 1. Fetch all subjects for this Grade Level
+        const gradeSubjects = await this.prisma.subject.findMany({
+            where: { gradeLevelId: section.gradeLevelId },
+            orderBy: { code: 'asc' }
+        });
+
+        // 2. Fetch all explicit section-subject assignments for this section (to get teacher assignments)
+        const assignedSubjects = await this.prisma.sectionSubject.findMany({
+            where: { sectionId, academicYearId },
+            include: { teacher: true }
+        });
+
+        // 3. Left Join
+        return gradeSubjects.map(subject => {
+            const assignment = assignedSubjects.find((a: any) => a.subjectId === subject.id);
+            return {
+                ...subject,
+                assignmentId: assignment?.id || null,
+                teacherId: assignment?.teacherId || null,
+                teacher: assignment?.teacher || null,
+            };
+        });
+    }
+
+    async assignTeacher(sectionId: string, subjectId: string, data: { teacherId: string; academicYearId: string }) {
+        return this.prisma.sectionSubject.upsert({
+            where: {
+                subjectId_sectionId_academicYearId: {
+                    subjectId,
+                    sectionId,
+                    academicYearId: data.academicYearId,
+                }
+            },
+            update: {
+                teacherId: data.teacherId,
+            },
+            create: {
                 sectionId,
-                subjectId: data.subjectId,
+                subjectId,
                 teacherId: data.teacherId,
                 academicYearId: data.academicYearId,
-            }
+            },
+            include: { teacher: true, subject: true }
         });
     }
 

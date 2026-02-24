@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { SubjectsService } from './subjects.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -20,7 +20,7 @@ export class SubjectsController {
         labHours?: number;
         description?: string;
         subjectType: string;
-        gradeLevelId?: string;
+        gradeLevelId: string;
         departmentId?: string;
         prerequisiteIds?: string[];
         corequisiteIds?: string[];
@@ -34,10 +34,10 @@ export class SubjectsController {
 
     @Roles('ADMIN', 'TEACHER', 'STUDENT')
     @Get()
-    async findAll() {
+    async findAll(@Query('gradeLevelId') gradeLevelId?: string) {
         return {
             success: true,
-            data: await this.subjectsService.findAll(),
+            data: await this.subjectsService.findAll(gradeLevelId),
         };
     }
 

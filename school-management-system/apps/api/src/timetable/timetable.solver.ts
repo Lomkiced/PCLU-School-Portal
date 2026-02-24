@@ -73,7 +73,7 @@ export class TimetableSolver {
         for (const t of teachers) {
             for (const a of t.sectionSubjects) {
                 const subject = subjects.find(s => s.id === a.subjectId);
-                if (!subject) continue;
+                if (!subject || !a.teacherId) continue;
 
                 // 1 unit = 1 time slot class
                 for (let i = 0; i < subject.units; i++) {

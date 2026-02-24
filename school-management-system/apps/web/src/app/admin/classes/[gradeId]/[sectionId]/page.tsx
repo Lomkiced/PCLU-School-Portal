@@ -6,9 +6,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
     ChevronRight, Home, Users, Search, Loader2, AlertCircle,
-    ChevronUp, ChevronDown, ChevronsUpDown, Mail, User, BookOpen, Plus, Trash2,
+    ChevronUp, ChevronDown, ChevronsUpDown, Mail, User, BookOpen, Plus, Trash2, Edit
 } from "lucide-react";
-import { AssignSectionSubjectModal } from "@/components/assign-section-subject-modal";
+import { AssignTeacherModal } from "@/components/assign-section-subject-modal";
 
 interface Student {
     id: string;
@@ -24,21 +24,20 @@ interface Student {
     parents: { firstName: string; lastName: string; contactNumber: string }[];
 }
 
-interface AssignedSubject {
-    id: string;
-    subject: {
-        id: string;
-        code: string;
-        name: string;
-        units: number;
-        subjectType: string;
-    };
+interface InheritedSubject {
+    id: string; // subject id
+    code: string;
+    name: string;
+    units: number;
+    subjectType: string;
+    assignmentId: string | null;
+    teacherId: string | null;
     teacher: {
         id: string;
         firstName: string;
         lastName: string;
         employeeId: string;
-    };
+    } | null;
 }
 
 interface SectionDetail {
@@ -49,7 +48,6 @@ interface SectionDetail {
     room: { name: string } | null;
     gradeLevel: { id: string; name: string };
     students: Student[];
-    sectionSubjects: AssignedSubject[];
     _count: { students: number };
 }
 
@@ -76,9 +74,10 @@ export default function SectionDetailPage() {
     // Tabs
     const [activeTab, setActiveTab] = useState<"students" | "subjects">("students");
 
+    const [inheritedSubjects, setInheritedSubjects] = useState<InheritedSubject[]>([]);
+
     // Modals
-    const [showAssignModal, setShowAssignModal] = useState(false);
-    const [deletingSubjectId, setDeletingSubjectId] = useState<string | null>(null);
+    const [assignTeacherData, setAssignTeacherData] = useState<{ subjectId: string, subjectName: string, teacherId: string | null } | null>(null);
 
     // Pagination/Sorting for Students
     const [sortField, setSortField] = useState<SortField>("lastName");
@@ -86,34 +85,24 @@ export default function SectionDetailPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
 
-    const fetchSection = () => {
-        api.get(`/sections/${sectionId}`)
-            .then((res) => {
-                // Ensure sectionSubjects exists even if backend returns undefined
-                const data = res.data.data;
-                if (!data.sectionSubjects) data.sectionSubjects = [];
-                setSection(data);
-            })
-            .catch(() => setError("Failed to load section"))
-            .finally(() => setLoading(false));
+    const fetchSection = async () => {
+        try {
+            const [secRes, subjRes] = await Promise.all([
+                api.get(`/sections/${sectionId}`),
+                api.get(`/sections/${sectionId}/subjects`)
+            ]);
+            setSection(secRes.data.data);
+            setInheritedSubjects(subjRes.data.data || []);
+        } catch (err) {
+            setError("Failed to load section details");
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         fetchSection();
     }, [sectionId]);
-
-    const handleRemoveSubject = async (subjectId: string) => {
-        if (!confirm("Are you sure you want to remove this subject from the section?")) return;
-        setDeletingSubjectId(subjectId);
-        try {
-            await api.delete(`/sections/${sectionId}/subjects/${subjectId}`);
-            fetchSection();
-        } catch (err) {
-            alert("Failed to remove subject");
-        } finally {
-            setDeletingSubjectId(null);
-        }
-    };
 
     if (loading) {
         return (
@@ -212,14 +201,6 @@ export default function SectionDetailPage() {
                         )}
                     </div>
                 </div>
-                {activeTab === "subjects" && (
-                    <button
-                        onClick={() => setShowAssignModal(true)}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-white text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-all shadow-md shadow-[hsl(var(--primary)/0.25)]"
-                    >
-                        <Plus className="w-4 h-4" /> Assign Subject
-                    </button>
-                )}
             </div>
 
             {/* Tabs */}
@@ -234,7 +215,7 @@ export default function SectionDetailPage() {
                     onClick={() => setActiveTab("subjects")}
                     className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "subjects" ? "border-[hsl(var(--primary))] text-[hsl(var(--foreground))]" : "border-transparent text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"}`}
                 >
-                    <BookOpen className="w-4 h-4" /> Assigned Subjects ({section.sectionSubjects?.length || 0})
+                    <BookOpen className="w-4 h-4" /> Curriculum Subjects ({inheritedSubjects.length})
                 </button>
             </div>
 
@@ -361,8 +342,8 @@ export default function SectionDetailPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {section.sectionSubjects?.map(({ id, subject, teacher }, i) => (
-                                        <tr key={id} className={`border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--muted)/0.3)] transition-colors ${i % 2 === 0 ? "" : "bg-[hsl(var(--muted)/0.15)]"}`}>
+                                    {inheritedSubjects.map((subject, i) => (
+                                        <tr key={subject.id} className={`border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--muted)/0.3)] transition-colors ${i % 2 === 0 ? "" : "bg-[hsl(var(--muted)/0.15)]"}`}>
                                             <td className="px-4 py-3 font-mono text-xs font-bold text-[hsl(var(--primary))]">{subject.code}</td>
                                             <td className="px-4 py-3 font-semibold">{subject.name}</td>
                                             <td className="px-4 py-3 text-xs text-[hsl(var(--muted-foreground))]">{subject.units}u</td>
@@ -372,43 +353,48 @@ export default function SectionDetailPage() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
-                                                        <User className="w-3 h-3 text-blue-500" />
+                                                {subject.teacher ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-[hsl(var(--primary)/0.1)] flex items-center justify-center shrink-0">
+                                                            <User className="w-3 h-3 text-[hsl(var(--primary))]" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold text-xs">{subject.teacher.lastName}, {subject.teacher.firstName}</p>
+                                                            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{subject.teacher.employeeId}</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="font-semibold text-xs">{teacher.lastName}, {teacher.firstName}</p>
-                                                        <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{teacher.employeeId}</p>
-                                                    </div>
-                                                </div>
+                                                ) : (
+                                                    <span className="text-xs text-amber-500 font-medium bg-amber-500/10 px-2 py-1 rounded-md">
+                                                        Unassigned
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <button
-                                                    onClick={() => handleRemoveSubject(subject.id)}
-                                                    disabled={deletingSubjectId === subject.id}
-                                                    className="p-2 rounded-lg hover:bg-red-500/10 text-[hsl(var(--muted-foreground))] hover:text-red-500 transition-colors disabled:opacity-50"
-                                                    title="Remove subject"
+                                                    onClick={() => setAssignTeacherData({
+                                                        subjectId: subject.id,
+                                                        subjectName: `${subject.code} — ${subject.name}`,
+                                                        teacherId: subject.teacherId
+                                                    })}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--muted))] hover:bg-[hsl(var(--primary)/0.1)] hover:text-[hsl(var(--primary))] text-xs font-semibold transition-colors border border-[hsl(var(--border))]"
                                                 >
-                                                    {deletingSubjectId === subject.id ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <Trash2 className="w-4 h-4" />
-                                                    )}
+                                                    <Edit className="w-3.5 h-3.5" />
+                                                    {subject.teacher ? "Change Teacher" : "Assign Teacher"}
                                                 </button>
                                             </td>
                                         </tr>
                                     ))}
-                                    {(!section.sectionSubjects || section.sectionSubjects.length === 0) && (
+                                    {inheritedSubjects.length === 0 && (
                                         <tr>
                                             <td colSpan={6} className="text-center py-12 text-[hsl(var(--muted-foreground))]">
                                                 <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                                <p className="font-medium">No subjects assigned yet.</p>
-                                                <button
-                                                    onClick={() => setShowAssignModal(true)}
-                                                    className="mt-3 text-xs font-semibold text-[hsl(var(--primary))] hover:underline"
+                                                <p className="font-medium">No subjects found for this grade level.</p>
+                                                <Link
+                                                    href={`/admin/subjects/${gradeId}`}
+                                                    className="mt-3 text-xs font-semibold text-[hsl(var(--primary))] hover:underline inline-block"
                                                 >
-                                                    Assign a subject now
-                                                </button>
+                                                    Manage curriculum subjects
+                                                </Link>
                                             </td>
                                         </tr>
                                     )}
@@ -420,12 +406,14 @@ export default function SectionDetailPage() {
             )}
 
             {/* Modal */}
-            <AssignSectionSubjectModal
-                open={showAssignModal}
+            <AssignTeacherModal
+                open={!!assignTeacherData}
                 sectionId={sectionId}
-                assignedSubjectIds={section.sectionSubjects?.map(s => s.subject.id) || []}
-                onClose={() => setShowAssignModal(false)}
-                onSuccess={() => { setShowAssignModal(false); fetchSection(); }}
+                subjectId={assignTeacherData?.subjectId || ""}
+                subjectName={assignTeacherData?.subjectName || ""}
+                currentTeacherId={assignTeacherData?.teacherId}
+                onClose={() => setAssignTeacherData(null)}
+                onSuccess={() => { setAssignTeacherData(null); fetchSection(); }}
             />
         </div>
     );
