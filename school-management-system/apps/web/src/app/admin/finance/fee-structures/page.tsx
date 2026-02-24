@@ -18,8 +18,12 @@ const feeItemSchema = z.object({
 const feeStructureSchema = z.object({
     name: z.string().min(1, "Bundle name is required"),
     gradeLevelId: z.string().optional(),
+    isDefault: z.boolean(),
     feeItems: z.array(feeItemSchema).min(1, "At least one fee item is required"),
-});
+}).refine(data => {
+    if (data.isDefault && !data.gradeLevelId) return false;
+    return true;
+}, { message: "Grade Level must be selected when setting as Default Bundle.", path: ["gradeLevelId"] });
 
 type FeeStructureFormValues = z.infer<typeof feeStructureSchema>;
 
@@ -39,6 +43,7 @@ export default function FeeStructuresPage() {
         defaultValues: {
             name: "",
             gradeLevelId: "",
+            isDefault: false,
             feeItems: [{ name: "Tuition", amount: 0 }],
         }
     });
@@ -84,6 +89,7 @@ export default function FeeStructuresPage() {
         form.reset({
             name: structure.name,
             gradeLevelId: structure.gradeLevelId || "",
+            isDefault: structure.isDefault || false,
             feeItems: structure.feeItems.map((item: any) => ({ name: item.name, amount: item.amount }))
         });
         setIsAddModalOpen(true);
@@ -137,7 +143,12 @@ export default function FeeStructuresPage() {
         {
             key: "gradeLevel",
             label: "Grade Level",
-            render: (row: any) => row.gradeLevel ? row.gradeLevel.name : <span className="text-gray-400">All Levels</span>
+            render: (row: any) => row.gradeLevel ? (
+                <div className="flex items-center gap-2">
+                    <span>{row.gradeLevel.name}</span>
+                    {row.isDefault && <span className="bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider">DEFAULT</span>}
+                </div>
+            ) : <span className="text-gray-400">All Levels</span>
         },
         {
             key: "feeItems",
@@ -192,7 +203,7 @@ export default function FeeStructuresPage() {
                 <button
                     onClick={() => {
                         setEditingId(null);
-                        form.reset({ name: "", gradeLevelId: "", feeItems: [{ name: "Tuition", amount: 0 }] });
+                        form.reset({ name: "", gradeLevelId: "", isDefault: false, feeItems: [{ name: "Tuition", amount: 0 }] });
                         setIsAddModalOpen(true);
                     }}
                     className="flex items-center gap-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-colors shadow-md shadow-[hsl(var(--primary)/0.25)]"
@@ -243,6 +254,19 @@ export default function FeeStructuresPage() {
                                     <option key={grade.id} value={grade.id}>{grade.name}</option>
                                 ))}
                             </select>
+                            {form.formState.errors.gradeLevelId && <p className="text-xs text-red-500">{form.formState.errors.gradeLevelId.message}</p>}
+                        </div>
+
+                        <div className="col-span-2 flex items-center gap-2 p-3 bg-[hsl(var(--primary)/0.05)] rounded-xl border border-[hsl(var(--primary)/0.1)]">
+                            <input
+                                type="checkbox"
+                                id="isDefault"
+                                {...form.register("isDefault")}
+                                className="w-4 h-4 rounded appearance-none border border-[hsl(var(--border))] checked:bg-[hsl(var(--primary))] checked:border-[hsl(var(--primary))] relative after:content-['✓'] after:absolute after:text-xs after:text-white after:left-0.5 after:-top-0.5 checked:after:block after:hidden"
+                            />
+                            <label htmlFor="isDefault" className="text-sm font-medium cursor-pointer">
+                                Set as Default Bundle for this Grade Level
+                            </label>
                         </div>
                     </div>
 

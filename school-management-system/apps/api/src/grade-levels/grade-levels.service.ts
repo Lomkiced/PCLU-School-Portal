@@ -37,6 +37,7 @@ export class GradeLevelsService {
                     orderBy: { name: 'asc' },
                 },
                 _count: { select: { sections: true, students: true, subjects: true } },
+                feeStructures: { where: { isDefault: true }, include: { feeItems: true } },
             },
         });
         if (!gradeLevel) throw new NotFoundException('Grade level not found');

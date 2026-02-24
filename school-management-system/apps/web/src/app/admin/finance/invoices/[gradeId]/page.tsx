@@ -34,9 +34,17 @@ export default function GradeLevelLedgerPage() {
         defaultValues: { feeStructureId: "" }
     });
 
+    const defaultBundle = gradeLevel?.feeStructures?.[0];
+
     useEffect(() => {
         if (gradeId) fetchInitialData();
     }, [gradeId]);
+
+    useEffect(() => {
+        if (defaultBundle && isBulkModalOpen) {
+            form.setValue("feeStructureId", defaultBundle.id);
+        }
+    }, [defaultBundle, isBulkModalOpen, form]);
 
     const fetchInitialData = async () => {
         setLoading(true);
@@ -176,23 +184,32 @@ export default function GradeLevelLedgerPage() {
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Select Fee Bundle to Apply</label>
-                        <select
-                            {...form.register("feeStructureId")}
-                            className="w-full p-2.5 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                        >
-                            <option value="">-- Choose Bundle --</option>
-                            {feeStructures.map(f => (
-                                <option key={f.id} value={f.id}>{f.name} (₱{f.feeItems.reduce((acc: number, curr: any) => acc + curr.amount, 0).toLocaleString()})</option>
-                            ))}
-                        </select>
-                        {form.formState.errors.feeStructureId && <p className="text-xs text-red-500">{form.formState.errors.feeStructureId.message}</p>}
+                        {defaultBundle ? (
+                            <div className="p-3 bg-[hsl(var(--primary)/0.05)] border border-[hsl(var(--primary)/0.2)] rounded-xl text-sm font-medium">
+                                <span className="text-[hsl(var(--primary))] block mb-1">Auto-locked to the default grade bundle:</span>
+                                <span>{defaultBundle.name} (₱{(defaultBundle.feeItems || []).reduce((acc: number, curr: any) => acc + curr.amount, 0).toLocaleString()})</span>
+                            </div>
+                        ) : (
+                            <>
+                                <select
+                                    disabled
+                                    {...form.register("feeStructureId")}
+                                    className="w-full p-2.5 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-xl text-sm opacity-50 cursor-not-allowed"
+                                >
+                                    <option value="">-- No Default Bundle Found --</option>
+                                </select>
+                                <p className="text-xs text-[hsl(var(--destructive))] font-medium mt-2">
+                                    No default bundle configured for this grade level. Please create one in Fee Structures.
+                                </p>
+                            </>
+                        )}
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-[hsl(var(--border))]">
                         <button type="button" onClick={() => setIsBulkModalOpen(false)} className="px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[hsl(var(--muted))] transition-colors">
                             Cancel
                         </button>
-                        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] px-6 py-2 rounded-xl text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-colors disabled:opacity-50">
+                        <button type="submit" disabled={isSubmitting || !defaultBundle} className="flex items-center gap-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] px-6 py-2 rounded-xl text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-colors disabled:opacity-50">
                             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />} Mass Generate
                         </button>
                     </div>

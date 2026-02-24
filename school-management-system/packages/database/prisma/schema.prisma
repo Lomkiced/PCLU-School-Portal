@@ -656,6 +656,8 @@ model FeeStructure {
   academicYearId String
   academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
   
+  isDefault      Boolean        @default(false)
+  
   feeItems       FeeItem[]
   invoices       Invoice[]
 }

@@ -19,7 +19,7 @@ export class FinanceService {
         });
     }
 
-    async createFeeStructure(data: { name: string; gradeLevelId?: string; academicYearId: string; feeItems: { name: string; amount: number }[] }) {
+    async createFeeStructure(data: { name: string; gradeLevelId?: string; academicYearId: string; feeItems: { name: string; amount: number }[], isDefault?: boolean }) {
         if (!data.feeItems || data.feeItems.length === 0) {
             throw new BadRequestException('A Fee Structure must contain at least one Fee Item.');
         }
@@ -27,11 +27,19 @@ export class FinanceService {
         return this.prisma.$transaction(async (tx) => {
             const sumTotal = data.feeItems.reduce((acc, curr) => acc + curr.amount, 0);
 
+            if (data.isDefault && data.gradeLevelId) {
+                await tx.feeStructure.updateMany({
+                    where: { gradeLevelId: data.gradeLevelId, academicYearId: data.academicYearId },
+                    data: { isDefault: false }
+                });
+            }
+
             return tx.feeStructure.create({
                 data: {
                     name: data.name,
                     gradeLevelId: data.gradeLevelId,
                     academicYearId: data.academicYearId,
+                    isDefault: data.isDefault || false,
                     feeItems: {
                         create: data.feeItems.map(item => ({
                             name: item.name,
@@ -44,7 +52,7 @@ export class FinanceService {
         });
     }
 
-    async updateFeeStructure(id: string, data: { name: string; gradeLevelId?: string; feeItems: { id?: string; name: string; amount: number }[] }) {
+    async updateFeeStructure(id: string, data: { name: string; gradeLevelId?: string; feeItems: { id?: string; name: string; amount: number }[], academicYearId?: string, isDefault?: boolean }) {
         if (!data.feeItems || data.feeItems.length === 0) {
             throw new BadRequestException('A Fee Structure must contain at least one Fee Item.');
         }
@@ -53,11 +61,23 @@ export class FinanceService {
             // Wipe old items and recreate to ensure exact match without complex diffing
             await tx.feeItem.deleteMany({ where: { feeStructureId: id } });
 
+            if (data.isDefault && data.gradeLevelId) {
+                // Must fetch to ascertain the target academic year context since the update signature lacks it sometimes
+                const existing = await tx.feeStructure.findUnique({ where: { id } });
+                if (existing) {
+                    await tx.feeStructure.updateMany({
+                        where: { gradeLevelId: data.gradeLevelId, academicYearId: existing.academicYearId, id: { not: id } },
+                        data: { isDefault: false }
+                    });
+                }
+            }
+
             return tx.feeStructure.update({
                 where: { id },
                 data: {
                     name: data.name,
                     gradeLevelId: data.gradeLevelId || null,
+                    isDefault: data.isDefault !== undefined ? data.isDefault : undefined,
                     feeItems: {
                         create: data.feeItems.map(item => ({
                             name: item.name,
