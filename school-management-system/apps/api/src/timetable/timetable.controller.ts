@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Param, UseGuards, Delete } from '@nestjs/c
 import { TimetableService } from './timetable.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Role } from '@sms/database';
+import { Role, DayOfWeek } from '@sms/database';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -60,7 +60,7 @@ export class TimetableController {
     @Post('timeslot/:id')
     async updateTimeslot(
         @Param('id') id: string,
-        @Body() body: any
+        @Body() body: { dayOfWeek: DayOfWeek, startTime: string, endTime: string, roomId: string, teacherId?: string }
     ) {
         return {
             success: true,
@@ -72,7 +72,7 @@ export class TimetableController {
     @Post('sections/:sectionId')
     async createTimeslot(
         @Param('sectionId') sectionId: string,
-        @Body() body: any
+        @Body() body: { dayOfWeek: any, startTime: string, endTime: string, subjectId: string, teacherId: string, roomId: string, academicYearId: string }
     ) {
         return {
             success: true,

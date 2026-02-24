@@ -79,6 +79,14 @@ export class TimetableService {
         const slot = await this.prisma.timetableSlot.findUnique({ where: { id } });
         if (!slot) throw new NotFoundException('Timeslot not found');
 
+        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+        if (!timeRegex.test(data.startTime) || !timeRegex.test(data.endTime)) {
+            throw new BadRequestException('Invalid time format. Use HH:mm');
+        }
+        if (data.startTime >= data.endTime) {
+            throw new BadRequestException('End time must be strictly greater than start time.');
+        }
+
         const teacherId = data.teacherId || slot.teacherId;
         await this.checkConflict(teacherId, data.roomId, data.dayOfWeek, data.startTime, data.endTime, id);
 
@@ -121,6 +129,14 @@ export class TimetableService {
     }
 
     async createTimeslot(sectionId: string, data: { dayOfWeek: DayOfWeek, startTime: string, endTime: string, subjectId: string, teacherId: string, roomId: string, academicYearId: string }) {
+        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+        if (!timeRegex.test(data.startTime) || !timeRegex.test(data.endTime)) {
+            throw new BadRequestException('Invalid time format. Use HH:mm');
+        }
+        if (data.startTime >= data.endTime) {
+            throw new BadRequestException('End time must be strictly greater than start time.');
+        }
+
         await this.checkConflict(data.teacherId, data.roomId, data.dayOfWeek, data.startTime, data.endTime);
 
         let timetable = await this.prisma.timetable.findFirst({

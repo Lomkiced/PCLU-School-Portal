@@ -7,9 +7,26 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const timeslotSchema = z.object({
+    dayOfWeek: z.string().min(1, "Day is required"),
+    startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:mm)"),
+    endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:mm)"),
+    subjectId: z.string().min(1, "Subject is required"),
+    teacherId: z.string().min(1, "Teacher is required"),
+    roomId: z.string().min(1, "Room is required"),
+}).refine((data) => data.startTime < data.endTime, {
+    message: "End time must be strictly after start time",
+    path: ["endTime"],
+});
+
+type TimeslotFormValues = z.infer<typeof timeslotSchema>;
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
-const HOURS = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"];
+const HOURS = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
 
 interface Timeslot {
     id: string;
@@ -35,41 +52,69 @@ export default function ScheduleBuilderPage() {
     const [error, setError] = useState("");
 
     // Lookups
-    const [subjects, setSubjects] = useState<any[]>([]);
     const [teachers, setTeachers] = useState<any[]>([]);
     const [rooms, setRooms] = useState<any[]>([]);
     const [activeAy, setActiveAy] = useState<any>(null);
+    const [inheritedSubjects, setInheritedSubjects] = useState<any[]>([]);
 
     // Modal state
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [formData, setFormData] = useState({
-        dayOfWeek: "MONDAY",
-        startTime: "07:00",
-        endTime: "08:00",
-        subjectId: "",
-        teacherId: "",
-        roomId: ""
+    const [isTeacherDisabled, setIsTeacherDisabled] = useState(false);
+
+    const form = useForm<TimeslotFormValues>({
+        resolver: zodResolver(timeslotSchema),
+        defaultValues: {
+            dayOfWeek: "MONDAY",
+            startTime: "07:00",
+            endTime: "08:00",
+            subjectId: "",
+            teacherId: "",
+            roomId: ""
+        }
     });
+
+    const { control, handleSubmit, setValue, formState: { errors }, reset } = form;
+    const selectedSubjectId = useWatch({ control, name: "subjectId" });
+
+    // Watch for subject change to auto-assign teacher
+    useEffect(() => {
+        if (selectedSubjectId && inheritedSubjects.length > 0) {
+            // The API returns the subject with its base properties, so the ID we want to match is `s.id`
+            const inheritedSub = inheritedSubjects.find((s: any) => s.id === selectedSubjectId);
+            if (inheritedSub && inheritedSub.teacherId) {
+                setValue("teacherId", inheritedSub.teacherId, { shouldValidate: true, shouldDirty: true });
+                setIsTeacherDisabled(true);
+            } else {
+                setValue("teacherId", "");
+                setIsTeacherDisabled(false);
+            }
+        } else {
+            setValue("teacherId", "");
+            setIsTeacherDisabled(false);
+        }
+    }, [selectedSubjectId, inheritedSubjects, setValue]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [secRes, tsRes, subRes, teachRes, roomRes, ayRes] = await Promise.all([
+            const [secRes, tsRes, teachRes, roomRes, ayRes, inheritedRes] = await Promise.all([
                 api.get(`/sections/${sectionId}`),
                 api.get(`/timetable/section/${sectionId}`),
-                api.get(`/subjects`),
                 api.get(`/teachers`), // teachers
                 api.get(`/rooms`),
-                api.get(`/academic-years`)
+                api.get(`/academic-years`),
+                api.get(`/sections/${sectionId}/subjects`)
             ]);
 
             setSection(secRes.data.data);
             setTimeslots(tsRes.data.data || []);
-            setSubjects(subRes.data.data || []);
             setTeachers(teachRes.data.data?.data || teachRes.data.data || []);
             setRooms(roomRes.data.data || []);
             setActiveAy(ayRes.data.data?.find((ay: any) => ay.isActive) || ayRes.data.data?.[0]);
+            setInheritedSubjects(inheritedRes.data.data || []);
+            // Debug the inherited subjects mapping
+            console.log("Inherited Subjects Mapping:", inheritedRes.data.data);
         } catch (err) {
             setError("Failed to load schedule data.");
         } finally {
@@ -81,11 +126,7 @@ export default function ScheduleBuilderPage() {
         if (sectionId) fetchData();
     }, [sectionId]);
 
-    const handleAddBlock = async () => {
-        if (!formData.subjectId || !formData.teacherId || !formData.roomId) {
-            toast.error("Please fill in all fields.");
-            return;
-        }
+    const onSubmit = async (data: TimeslotFormValues) => {
         if (!activeAy) {
             toast.error("No active academic year found.");
             return;
@@ -94,7 +135,7 @@ export default function ScheduleBuilderPage() {
         setSubmitting(true);
         try {
             await api.post(`/timetable/sections/${sectionId}`, {
-                ...formData,
+                ...data,
                 academicYearId: activeAy.id
             });
             toast.success("Timeslot added successfully!");
@@ -107,6 +148,14 @@ export default function ScheduleBuilderPage() {
         }
     };
 
+    const handleAddClick = (dayStr: string, hourStr: string) => {
+        const startInt = parseInt(hourStr.split(":")[0]);
+        const endStr = `${(startInt + 1).toString().padStart(2, "0")}:00`;
+        reset({ dayOfWeek: dayStr, startTime: hourStr, endTime: endStr, subjectId: "", teacherId: "", roomId: "" });
+        setIsTeacherDisabled(false); // Reset disabled state
+        setIsAddModalOpen(true);
+    };
+
     const handleDeleteBlock = async (id: string) => {
         if (!confirm("Are you sure you want to remove this block?")) return;
         try {
@@ -116,13 +165,6 @@ export default function ScheduleBuilderPage() {
         } catch (error) {
             toast.error("Failed to delete timeslot.");
         }
-    };
-
-    // Calculate end time based on start time
-    const handleStartTimeChange = (start: string) => {
-        const startInt = parseInt(start.split(":")[0]);
-        const endStr = `${(startInt + 1).toString().padStart(2, "0")}:00`;
-        setFormData({ ...formData, startTime: start, endTime: endStr });
     };
 
     if (loading) {
@@ -160,7 +202,7 @@ export default function ScheduleBuilderPage() {
                     </div>
                 </div>
                 <button
-                    onClick={() => setIsAddModalOpen(true)}
+                    onClick={() => handleAddClick("MONDAY", "07:00")}
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-white text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-all shadow-md shadow-[hsl(var(--primary)/0.25)]"
                 >
                     <Plus className="w-4 h-4" /> Add Block
@@ -215,10 +257,7 @@ export default function ScheduleBuilderPage() {
                                             ) : (
                                                 <div className="w-full h-full border-2 border-dashed border-[hsl(var(--border)/0.5)] rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                                                     <button
-                                                        onClick={() => {
-                                                            setFormData({ ...formData, dayOfWeek: day, startTime: hour, endTime: `${(parseInt(hour.split(":")[0]) + 1).toString().padStart(2, "0")}:00` });
-                                                            setIsAddModalOpen(true);
-                                                        }}
+                                                        onClick={() => handleAddClick(day, hour)}
                                                         className="text-xs font-semibold text-[hsl(var(--primary))] flex items-center gap-1"
                                                     >
                                                         <Plus className="w-3 h-3" /> Add
@@ -236,82 +275,94 @@ export default function ScheduleBuilderPage() {
 
             {/* Add Block Modal */}
             <Modal open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add Class Block">
-                <div className="space-y-4 py-2">
-                    <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
+                    <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Day of Week</label>
+                            <label className="text-sm font-medium">Day</label>
                             <select
+                                {...form.register("dayOfWeek")}
                                 className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
-                                value={formData.dayOfWeek}
-                                onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
                             >
                                 {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
+                            {errors.dayOfWeek && <p className="text-xs text-red-500">{errors.dayOfWeek.message}</p>}
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Start Time</label>
                             <select
+                                {...form.register("startTime")}
                                 className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
-                                value={formData.startTime}
-                                onChange={(e) => handleStartTimeChange(e.target.value)}
                             >
                                 {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
                             </select>
+                            {errors.startTime && <p className="text-xs text-red-500">{errors.startTime.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">End Time</label>
+                            <select
+                                {...form.register("endTime")}
+                                className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
+                            >
+                                {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+                            </select>
+                            {errors.endTime && <p className="text-xs text-red-500">{errors.endTime.message}</p>}
                         </div>
                     </div>
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Subject</label>
                         <select
+                            {...form.register("subjectId")}
                             className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
-                            value={formData.subjectId}
-                            onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
                         >
                             <option value="">-- Select Subject --</option>
-                            {subjects.map((sub) => (
+                            {inheritedSubjects.map((sub: any) => (
                                 <option key={sub.id} value={sub.id}>{sub.name} ({sub.code})</option>
                             ))}
                         </select>
+                        {errors.subjectId && <p className="text-xs text-red-500">{errors.subjectId.message}</p>}
                     </div>
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Teacher</label>
                         <select
-                            className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
-                            value={formData.teacherId}
-                            onChange={(e) => setFormData({ ...formData, teacherId: e.target.value })}
+                            {...form.register("teacherId")}
+                            className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] disabled:bg-[hsl(var(--muted))] disabled:text-[hsl(var(--muted-foreground))] disabled:cursor-not-allowed focus:border-[hsl(var(--primary))] outline-none"
+                            disabled={isTeacherDisabled}
                         >
-                            <option value="">-- Select Teacher --</option>
+                            <option value="" disabled={isTeacherDisabled}>-- Select Teacher --</option>
                             {teachers.map((teach) => (
                                 <option key={teach.id} value={teach.id}>{teach.firstName} {teach.lastName}</option>
                             ))}
                         </select>
+                        {errors.teacherId && <p className="text-xs text-red-500">{errors.teacherId.message}</p>}
+                        {isTeacherDisabled && <p className="text-xs font-semibold text-[hsl(var(--primary))]">Teacher locked from inherit assignment.</p>}
                     </div>
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Room</label>
                         <select
+                            {...form.register("roomId")}
                             className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
-                            value={formData.roomId}
-                            onChange={(e) => setFormData({ ...formData, roomId: e.target.value })}
                         >
                             <option value="">-- Select Room --</option>
                             {rooms.map((room) => (
                                 <option key={room.id} value={room.id}>{room.name} (Cap: {room.capacity})</option>
                             ))}
                         </select>
+                        {errors.roomId && <p className="text-xs text-red-500">{errors.roomId.message}</p>}
                     </div>
 
                     <div className="pt-4">
                         <button
+                            type="submit"
                             disabled={submitting}
-                            onClick={handleAddBlock}
                             className="w-full py-2.5 bg-[hsl(var(--primary))] text-white rounded-xl font-medium hover:bg-[hsl(var(--primary-hover))] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Block"}
                         </button>
                     </div>
-                </div>
+                </form>
             </Modal>
         </div>
     );
