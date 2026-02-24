@@ -689,6 +689,8 @@ model Invoice {
   academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
   
   totalAmount    Float
+  discountAmount Float          @default(0)
+  discountReason String?
   dueDate        DateTime
   status         InvoiceStatus  @default(PENDING)
   

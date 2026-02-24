@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { FinanceService } from './finance.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -64,12 +64,45 @@ export class FinanceController {
     }
 
     @Roles('ADMIN')
+    @Get('invoices/ledgers/:gradeLevelId')
+    async getStudentLedgersByGrade(@Param('gradeLevelId') gradeLevelId: string) {
+        return {
+            success: true,
+            data: await this.financeService.getStudentLedgersByGrade(gradeLevelId)
+        };
+    }
+
+    @Roles('ADMIN')
     @Post('invoices/generate')
     async generateInvoice(@Body() body: { studentId: string, feeStructureId: string }) {
         return {
             success: true,
             data: await this.financeService.generateInvoice(body.studentId, body.feeStructureId),
             message: 'Invoice generated successfully'
+        };
+    }
+
+    @Roles('ADMIN')
+    @Post('invoices/batch')
+    async generateInvoiceBatch(@Body() body: { gradeLevelId: string, feeStructureId: string }) {
+        const result = await this.financeService.generateInvoiceBatch(body.gradeLevelId, body.feeStructureId);
+        return {
+            success: true,
+            data: result,
+            message: result.message
+        };
+    }
+
+    @Roles('ADMIN')
+    @Patch('invoices/:id/discount')
+    async applyDiscount(
+        @Param('id') id: string,
+        @Body() body: { discountAmount: number; discountReason: string }
+    ) {
+        return {
+            success: true,
+            data: await this.financeService.applyDiscount(id, body),
+            message: 'Discount applied successfully'
         };
     }
 
