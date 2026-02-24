@@ -18,7 +18,7 @@ export class GradeLevelsService {
                         _count: { select: { students: true } },
                     },
                 },
-                _count: { select: { sections: true, students: true } },
+                _count: { select: { sections: true, students: true, subjects: true } },
             },
             orderBy: { name: 'asc' },
         });
@@ -36,7 +36,7 @@ export class GradeLevelsService {
                     },
                     orderBy: { name: 'asc' },
                 },
-                _count: { select: { sections: true, students: true } },
+                _count: { select: { sections: true, students: true, subjects: true } },
             },
         });
         if (!gradeLevel) throw new NotFoundException('Grade level not found');

@@ -9,7 +9,7 @@ interface GradeLevel {
     id: string;
     name: string;
     schoolLevel: string;
-    _count: { subjects: number };
+    _count?: { subjects?: number };
 }
 
 const schoolLevelColors: Record<string, string> = {
@@ -100,7 +100,7 @@ export default function SubjectsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold">
-                                {gradeLevels.reduce((a, g) => a + (g._count.subjects || 0), 0)}
+                                {gradeLevels.reduce((a, g) => a + (g._count?.subjects || 0), 0)}
                             </p>
                             <p className="text-xs text-[hsl(var(--muted-foreground))]">Total Subjects</p>
                         </div>
@@ -132,7 +132,7 @@ export default function SubjectsPage() {
                                             {gl.name}
                                         </h3>
                                         <div className="flex items-center gap-3 text-xs text-[hsl(var(--muted-foreground))]">
-                                            <span>{gl._count.subjects || 0} subject{(gl._count.subjects || 0) !== 1 ? "s" : ""}</span>
+                                            <span>{gl._count?.subjects || 0} subject{(gl._count?.subjects || 0) !== 1 ? "s" : ""}</span>
                                         </div>
                                     </div>
                                     <ChevronRight className="w-5 h-5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] group-hover:translate-x-1 transition-all" />
