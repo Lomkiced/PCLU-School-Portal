@@ -87,8 +87,9 @@ export class TimetableService {
             throw new BadRequestException('End time must be strictly greater than start time.');
         }
 
-        const teacherId = data.teacherId || slot.teacherId;
-        await this.checkConflict(teacherId, data.roomId, data.dayOfWeek, data.startTime, data.endTime, id);
+        // The teacherId for conflict check should be the one provided in data, or the existing one if not provided.
+        // The sectionId for conflict check should be the existing slot's sectionId.
+        await this.checkConflict(data.teacherId || slot.teacherId, data.roomId, slot.sectionId, data.dayOfWeek, data.startTime, data.endTime, id);
 
         return this.prisma.timetableSlot.update({
             where: { id },
@@ -102,22 +103,29 @@ export class TimetableService {
         });
     }
 
-    private async checkConflict(teacherId: string, roomId: string, dayOfWeek: DayOfWeek, startTime: string, endTime: string, currentTimeslotId?: string) {
+    private async checkConflict(teacherId: string, roomId: string, sectionId: string, dayOfWeek: DayOfWeek, startTime: string, endTime: string, currentTimeslotId?: string) {
         const existingSlots = await this.prisma.timetableSlot.findMany({
             where: {
                 OR: [
                     { teacherId },
-                    { roomId }
+                    { roomId },
+                    { sectionId }
                 ],
                 dayOfWeek,
                 ...(currentTimeslotId ? { id: { not: currentTimeslotId } } : {})
             },
-            include: { section: true, teacher: true, room: true }
+            include: { section: true, teacher: true, room: true, subject: true }
         });
 
         for (const slot of existingSlots) {
             // Check for overlap: start1 < end2 AND end1 > start2
             if (startTime < slot.endTime && endTime > slot.startTime) {
+                if (slot.sectionId === sectionId && slot.subjectId === currentTimeslotId) {
+                    // In case of updating self, safely ignored by the `{ not: id }` query
+                } else if (slot.sectionId === sectionId) {
+                    throw new BadRequestException(`This section already has ${slot.subject.name} scheduled at this time.`);
+                }
+
                 if (slot.teacherId === teacherId) {
                     throw new BadRequestException(`Teacher ${slot.teacher.firstName} ${slot.teacher.lastName} is already booked for Section ${slot.section.name} at this time.`);
                 }
@@ -137,7 +145,7 @@ export class TimetableService {
             throw new BadRequestException('End time must be strictly greater than start time.');
         }
 
-        await this.checkConflict(data.teacherId, data.roomId, data.dayOfWeek, data.startTime, data.endTime);
+        await this.checkConflict(data.teacherId, data.roomId, sectionId, data.dayOfWeek, data.startTime, data.endTime);
 
         let timetable = await this.prisma.timetable.findFirst({
             where: { academicYearId: data.academicYearId }

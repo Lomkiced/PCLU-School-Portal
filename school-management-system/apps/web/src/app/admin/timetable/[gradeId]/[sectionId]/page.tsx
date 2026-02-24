@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { getDurationInMinutes, getGridRowStart, getGridRowSpan, getDayColumn } from "@/lib/time-utils";
 
 const timeslotSchema = z.object({
     dayOfWeek: z.string().min(1, "Day is required"),
@@ -142,7 +143,22 @@ export default function ScheduleBuilderPage() {
             setIsAddModalOpen(false);
             fetchData(); // Reload schedule
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to add timeslot. Conflict detected.");
+            const errData = error.response?.data;
+            let errorMessage = "Failed to add timeslot. Conflict detected.";
+
+            if (errData?.message) {
+                if (typeof errData.message === 'string') {
+                    errorMessage = errData.message;
+                } else if (Array.isArray(errData.message)) {
+                    errorMessage = errData.message[0];
+                } else if (typeof errData.message === 'object' && errData.message.message) {
+                    errorMessage = errData.message.message;
+                }
+            } else if (errData?.error && typeof errData.error === 'string') {
+                errorMessage = errData.error;
+            }
+
+            toast.error(errorMessage);
         } finally {
             setSubmitting(false);
         }
@@ -209,68 +225,70 @@ export default function ScheduleBuilderPage() {
                 </button>
             </div>
 
-            {/* Weekly Grid */}
-            <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
-                <table className="w-full min-w-[800px] text-sm text-left">
-                    <thead className="bg-[hsl(var(--muted)/0.5)] border-b border-[hsl(var(--border))]">
-                        <tr>
-                            <th className="px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] w-24">Time</th>
-                            {DAYS.map((day) => (
-                                <th key={day} className="px-4 py-3 font-semibold text-[hsl(var(--muted-foreground))] text-center border-l border-[hsl(var(--border))]">
-                                    {day}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[hsl(var(--border))]">
-                        {HOURS.map((hour) => (
-                            <tr key={hour} className="hover:bg-[hsl(var(--muted)/0.3)] transition-colors">
-                                <td className="px-4 py-4 font-medium text-[hsl(var(--muted-foreground))] align-top">
-                                    {hour}
-                                </td>
-                                {DAYS.map((day) => {
-                                    // Find slot for this day and time
-                                    const slot = timeslots.find(t => t.dayOfWeek === day && t.startTime === hour);
+            {/* Weekly Proportional Grid */}
+            <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl p-4 shadow-sm overflow-x-auto">
+                <div
+                    className="min-w-[800px] grid grid-cols-[80px_repeat(5,1fr)] gap-x-3 relative"
+                    style={{ gridTemplateRows: "auto repeat(48, minmax(1.25rem, 1fr))" }}
+                >
+                    {/* Header Row */}
+                    <div className="col-start-1" style={{ gridRow: 1 }}></div>
+                    {DAYS.map((day, idx) => (
+                        <div key={day} className="text-center font-semibold text-[hsl(var(--muted-foreground))] pb-4 border-b border-[hsl(var(--border))] z-10 bg-[hsl(var(--card))]" style={{ gridColumnStart: idx + 2, gridRow: 1 }}>
+                            {day}
+                        </div>
+                    ))}
 
-                                    return (
-                                        <td key={day} className="p-2 border-l border-[hsl(var(--border))] align-top h-24 w-[18%]">
-                                            {slot ? (
-                                                <div className="group relative bg-[hsl(var(--primary)/0.1)] border border-[hsl(var(--primary)/0.2)] rounded-xl p-3 h-full flex flex-col justify-between hover:bg-[hsl(var(--primary)/0.15)] transition-colors">
-                                                    <div>
-                                                        <p className="font-bold text-[hsl(var(--foreground))] text-xs truncate">
-                                                            {slot.subject.name}
-                                                        </p>
-                                                        <p className="text-[11px] text-[hsl(var(--muted-foreground))] truncate mt-0.5">
-                                                            {slot.teacher.firstName} {slot.teacher.lastName}
-                                                        </p>
-                                                        <p className="text-[11px] text-[hsl(var(--muted-foreground))] truncate">
-                                                            Room: {slot.room.name}
-                                                        </p>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleDeleteBlock(slot.id)}
-                                                        className="absolute top-2 right-2 p-1.5 bg-red-500/10 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className="w-full h-full border-2 border-dashed border-[hsl(var(--border)/0.5)] rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleAddClick(day, hour)}
-                                                        className="text-xs font-semibold text-[hsl(var(--primary))] flex items-center gap-1"
-                                                    >
-                                                        <Plus className="w-3 h-3" /> Add
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                    {/* Background Grid Lines (Horizontal) */}
+                    {Array.from({ length: 13 }).map((_, idx) => (
+                        <div key={`line-${idx}`} className="col-start-2 col-span-5 border-t border-[hsl(var(--border)/0.5)] z-0 pointer-events-none" style={{ gridRowStart: 2 + idx * 4 }} />
+                    ))}
+
+                    {/* Time Labels */}
+                    {HOURS.map((hour, idx) => (
+                        <div key={hour} className="col-start-1 text-right pr-4 text-xs font-medium text-[hsl(var(--muted-foreground))] z-10 translate-y-[-0.75rem]" style={{ gridRowStart: 2 + idx * 4 }}>
+                            {hour}
+                        </div>
+                    ))}
+
+                    {/* Timeslot Blocks */}
+                    {timeslots.map((slot) => {
+                        const rowStart = getGridRowStart(slot.startTime);
+                        const span = getGridRowSpan(getDurationInMinutes(slot.startTime, slot.endTime));
+                        const colStart = getDayColumn(slot.dayOfWeek);
+
+                        return (
+                            <div
+                                key={slot.id}
+                                className="relative z-10 group bg-[hsl(var(--primary)/0.15)] border border-[hsl(var(--primary)/0.3)] rounded-xl py-1 px-2 overflow-hidden hover:bg-[hsl(var(--primary)/0.2)] hover:shadow-md transition-all flex flex-col justify-start"
+                                style={{
+                                    gridRowStart: rowStart,
+                                    gridRowEnd: `span ${span}`,
+                                    gridColumnStart: colStart,
+                                    marginTop: '2px', // slight gap 
+                                    marginBottom: '2px'
+                                }}
+                            >
+                                <p className="font-bold text-[hsl(var(--foreground))] text-xs sm:text-sm truncate">
+                                    {slot.subject.name}
+                                </p>
+                                <p className="text-[10px] sm:text-[11px] text-[hsl(var(--primary))] font-medium truncate mt-0.5">
+                                    {slot.teacher.firstName} {slot.teacher.lastName}
+                                </p>
+                                <p className="text-[10px] text-[hsl(var(--muted-foreground))] truncate mt-1">
+                                    {slot.startTime} - {slot.endTime} • Rm {slot.room.name}
+                                </p>
+
+                                <button
+                                    onClick={() => handleDeleteBlock(slot.id)}
+                                    className="absolute top-1.5 right-1.5 p-1 bg-red-500/10 text-red-500 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Add Block Modal */}
@@ -289,22 +307,20 @@ export default function ScheduleBuilderPage() {
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Start Time</label>
-                            <select
+                            <input
+                                type="time"
                                 {...form.register("startTime")}
                                 className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
-                            >
-                                {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
-                            </select>
+                            />
                             {errors.startTime && <p className="text-xs text-red-500">{errors.startTime.message}</p>}
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">End Time</label>
-                            <select
+                            <input
+                                type="time"
                                 {...form.register("endTime")}
                                 className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
-                            >
-                                {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
-                            </select>
+                            />
                             {errors.endTime && <p className="text-xs text-red-500">{errors.endTime.message}</p>}
                         </div>
                     </div>
