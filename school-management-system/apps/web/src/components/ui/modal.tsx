@@ -11,6 +11,7 @@ interface ModalProps {
     description?: string;
     children: React.ReactNode;
     size?: "sm" | "md" | "lg" | "xl";
+    maxWidth?: string;
 }
 
 const sizeClasses = {
@@ -27,6 +28,7 @@ export function Modal({
     description,
     children,
     size = "md",
+    maxWidth,
 }: ModalProps) {
     const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +58,7 @@ export function Modal({
             <div
                 className={cn(
                     "relative w-full mx-4 bg-[hsl(var(--card))] rounded-2xl shadow-2xl border border-[hsl(var(--border))] animate-in zoom-in-95 fade-in duration-200",
-                    sizeClasses[size]
+                    maxWidth || sizeClasses[size]
                 )}
             >
                 {/* Header */}

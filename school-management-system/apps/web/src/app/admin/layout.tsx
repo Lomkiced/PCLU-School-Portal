@@ -19,6 +19,7 @@ import {
     ChevronLeft,
     Menu,
     School,
+    ReceiptText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +30,8 @@ const adminNavItems = [
     { label: "Faculty", href: "/admin/faculty", icon: Users },
     { label: "Subjects", href: "/admin/subjects", icon: BookOpen },
     { label: "Timetable", href: "/admin/timetable", icon: Calendar },
-    { label: "Finance", href: "/admin/finance", icon: DollarSign },
+    { label: "Fee Structures", href: "/admin/finance/fee-structures", icon: DollarSign },
+    { label: "Invoices", href: "/admin/finance/invoices", icon: ReceiptText },
     { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
     { label: "Messages", href: "/admin/messages", icon: MessageSquare },
     { label: "Settings", href: "/admin/settings", icon: Settings },

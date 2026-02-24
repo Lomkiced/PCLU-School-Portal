@@ -78,7 +78,7 @@ model StudentProfile {
   grades           Grade[]
   quizSubmissions  QuizSubmission[]
   activitySubs     ActivitySubmission[]
-  fees             StudentFee[]
+  invoices         Invoice[]
 }
 
 enum Gender {
@@ -168,6 +168,7 @@ model AcademicYear {
   fees        FeeStructure[]
   grades      Grade[]
   timetables  Timetable[]
+  invoices    Invoice[]
 }
 
 model Department {
@@ -641,68 +642,71 @@ model Notification {
 }
 
 // ==========================================
-// FINANCE
+// ==========================================
+// FINANCE (ENTERPRISE LEDGER)
 // ==========================================
 
-enum FeeType {
-  TUITION
-  MISC
-  LABORATORY
-  OTHERS
+model FeeStructure {
+  id             String         @id @default(uuid())
+  name           String
+  
+  gradeLevelId   String?
+  gradeLevel     GradeLevel?    @relation(fields: [gradeLevelId], references: [id])
+  
+  academicYearId String
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
+  
+  feeItems       FeeItem[]
+  invoices       Invoice[]
 }
 
-model FeeStructure {
-  id             String   @id @default(uuid())
+model FeeItem {
+  id             String         @id @default(uuid())
   name           String
   amount         Float
   
-  gradeLevelId   String?
-  gradeLevel     GradeLevel? @relation(fields: [gradeLevelId], references: [id])
-  
-  academicYearId String
-  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
-  
-  feeType        FeeType
-  
-  studentFees    StudentFee[]
+  feeStructureId String
+  feeStructure   FeeStructure   @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
 }
 
-enum PaymentStatus {
-  PAID
+enum InvoiceStatus {
+  PENDING
   PARTIAL
-  UNPAID
+  PAID
+  OVERDUE
 }
 
-model StudentFee {
-  id             String   @id @default(uuid())
+model Invoice {
+  id             String         @id @default(uuid())
   
   studentId      String
   student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
   
   feeStructureId String
-  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id])
+  feeStructure   FeeStructure   @relation(fields: [feeStructureId], references: [id])
   
-  amountDue      Float
-  amountPaid     Float    @default(0)
-  balance        Float
+  academicYearId String
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
+  
+  totalAmount    Float
   dueDate        DateTime
-  status         PaymentStatus @default(UNPAID)
+  status         InvoiceStatus  @default(PENDING)
   
-  payments       PaymentRecord[]
+  payments       Payment[]
 
   @@unique([studentId, feeStructureId])
 }
 
-model PaymentRecord {
-  id              String   @id @default(uuid())
+model Payment {
+  id              String         @id @default(uuid())
   
-  studentFeeId    String
-  studentFee      StudentFee @relation(fields: [studentFeeId], references: [id], onDelete: Cascade)
+  invoiceId       String
+  invoice         Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   
   amountPaid      Float
-  paymentDate     DateTime @default(now())
-  referenceNumber String?  @unique
-  method          String   // CASH, GCASH, BANK_TRANSFER
+  paymentDate     DateTime       @default(now())
+  method          String         // CASH, GCASH, BANK_TRANSFER
+  referenceNumber String?        @unique
 }
 
 // ==========================================
