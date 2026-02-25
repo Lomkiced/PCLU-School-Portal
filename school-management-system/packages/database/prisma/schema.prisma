@@ -69,6 +69,7 @@ model User {
   notifications    Notification[]
   credential       Credential?
   announcements    Announcement[]    @relation("AnnouncementAuthor")
+  announcementReceipts AnnouncementReadReceipt[]
 }
 
 model StudentProfile {
@@ -608,17 +609,54 @@ enum VisibilityTarget {
   TEACHERS_ONLY
 }
 
+enum AnnouncementPriority {
+  INFO
+  WARNING
+  URGENT
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
 model Announcement {
   id          String   @id @default(uuid())
   title       String
-  body        String   @db.Text // Rich Text HTML
+  content     String   @db.Text // Rich Text HTML
+  priority    AnnouncementPriority @default(INFO)
+  status      AnnouncementStatus @default(DRAFT)
   
   authorId    String
   author      User     @relation("AnnouncementAuthor", fields: [authorId], references: [id])
   
-  visibility  VisibilityTarget
+  // Targeting
+  targetRoles       Role[]
+  targetGradeLevels String[] // Array of GradeLevel IDs
+  targetSections    String[] // Array of Section IDs
+  
+  // Scheduling
   publishedAt DateTime?
   expiresAt   DateTime?
+  
+  // Engagement
+  readReceipts AnnouncementReadReceipt[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AnnouncementReadReceipt {
+  id              String       @id @default(uuid())
+  announcementId  String
+  announcement    Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt          DateTime     @default(now())
+
+  @@unique([announcementId, userId])
 }
 
 model Message {
