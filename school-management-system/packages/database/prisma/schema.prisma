@@ -108,6 +108,7 @@ model StudentProfile {
   quizSubmissions  QuizSubmission[]
   activitySubs     ActivitySubmission[]
   invoices         Invoice[]
+  studentSubmissions StudentSubmission[]
 }
 
 enum Gender {
@@ -149,6 +150,7 @@ model TeacherProfile {
   quizzes       Quiz[]
   activities    Activity[]
   timetableSlots TimetableSlot[]
+  courses       Course[]
 }
 
 model ParentProfile {
@@ -252,6 +254,7 @@ model GradeLevel {
   subjects    Subject[]
   feeStructures FeeStructure[]
   academicRecords Enrollment[]
+  courses     Course[]
 }
 
 model Section {
@@ -339,6 +342,7 @@ model Subject {
   activities     Activity[]
   grades         Grade[]
   timetableSlots TimetableSlot[]
+  courses        Course[]
 }
 
 enum EnrollmentGradeStatus {
@@ -494,6 +498,70 @@ model Grade {
 // ==========================================
 // LMS (Quizzes, Activities, Content)
 // ==========================================
+
+model Course {
+  id              String   @id @default(uuid())
+  subjectId       String
+  subject         Subject  @relation(fields: [subjectId], references: [id])
+  gradeLevelId    String
+  gradeLevel      GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  teacherId       String
+  teacher         TeacherProfile @relation(fields: [teacherId], references: [id])
+  
+  modules         Module[]
+  
+  @@unique([subjectId, gradeLevelId, teacherId])
+}
+
+model Module {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?  @db.Text
+  orderIndex      Int      @default(0)
+  
+  courseId        String
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  items           LMSItem[]
+}
+
+enum LMSItemType {
+  VIDEO
+  PDF
+  QUIZ
+  ASSIGNMENT
+  PAGE
+}
+
+model LMSItem {
+  id              String   @id @default(uuid())
+  title           String
+  body            String?  @db.Text
+  type            LMSItemType
+  attachments     Json?
+  orderIndex      Int      @default(0)
+  
+  moduleId        String
+  module          Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  
+  submissions     StudentSubmission[]
+}
+
+model StudentSubmission {
+  id              String   @id @default(uuid())
+  itemId          String
+  item            LMSItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  fileUrl         String?
+  score           Float?
+  feedback        String?  @db.Text
+  submittedAt     DateTime @default(now())
+
+  @@unique([itemId, studentId])
+}
 
 enum QuizStatus {
   DRAFT

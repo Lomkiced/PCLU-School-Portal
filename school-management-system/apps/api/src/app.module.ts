@@ -31,8 +31,10 @@ import { IdGeneratorModule } from './id-generator/id-generator.module';
 import { CredentialsModule } from './credentials/credentials.module';
 import { WebsocketModule } from './websocket/websocket.module';
 
+import { LmsModule } from './lms/lms.module';
+
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, StudentsModule, TeachersModule, ParentsModule, AcademicYearsModule, DepartmentsModule, GradeLevelsModule, SectionsModule, RoomsModule, SubjectsModule, EnrollmentsModule, TimetableModule, AttendanceModule, GradesModule, ContentModule, QuizzesModule, ActivitiesModule, AnnouncementsModule, MessagesModule, GroupChatsModule, FinanceModule, NotificationsModule, FileUploadModule, AiGradingModule, IdGeneratorModule, CredentialsModule, WebsocketModule],
+  imports: [PrismaModule, AuthModule, UsersModule, StudentsModule, TeachersModule, ParentsModule, AcademicYearsModule, DepartmentsModule, GradeLevelsModule, SectionsModule, RoomsModule, SubjectsModule, EnrollmentsModule, TimetableModule, AttendanceModule, GradesModule, AnnouncementsModule, MessagesModule, GroupChatsModule, FinanceModule, NotificationsModule, FileUploadModule, AiGradingModule, IdGeneratorModule, CredentialsModule, WebsocketModule, LmsModule],
   controllers: [AppController],
   providers: [AppService],
 })
