@@ -54,11 +54,11 @@ interface SectionDetail {
 type SortField = "lastName" | "studentId" | "gender" | "enrollmentStatus";
 
 const statusColors: Record<string, string> = {
-    ENROLLED: "bg-emerald-500/10 text-emerald-600",
+    ACTIVE: "bg-emerald-500/10 text-emerald-600",
+    PROMOTED: "bg-indigo-500/10 text-indigo-600",
+    RETAINED: "bg-amber-500/10 text-amber-600",
     DROPPED: "bg-red-500/10 text-red-500",
     GRADUATED: "bg-blue-500/10 text-blue-500",
-    TRANSFERRED: "bg-amber-500/10 text-amber-600",
-    PENDING: "bg-gray-500/10 text-gray-500",
 };
 
 export default function SectionDetailPage() {

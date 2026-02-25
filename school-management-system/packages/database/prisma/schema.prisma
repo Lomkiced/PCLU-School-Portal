@@ -9,6 +9,33 @@ datasource db {
 }
 
 // ==========================================
+// ACADEMIC HISTORY / ROLLOVER
+// ==========================================
+
+model Enrollment {
+  id              String   @id @default(uuid())
+  
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  academicYearId  String
+  academicYear    AcademicYear   @relation(fields: [academicYearId], references: [id])
+  
+  gradeLevelId    String
+  gradeLevel      GradeLevel     @relation(fields: [gradeLevelId], references: [id])
+  
+  sectionId       String?
+  section         Section?       @relation(fields: [sectionId], references: [id])
+  
+  status          EnrollmentStatus @default(ACTIVE)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([studentId, academicYearId])
+}
+
+// ==========================================
 // AUTH & USERS
 // ==========================================
 
@@ -62,7 +89,7 @@ model StudentProfile {
   guardianContact  String
   guardianEmail    String?
   
-  enrollmentStatus EnrollmentStatus @default(ENROLLED)
+  enrollmentStatus EnrollmentStatus @default(ACTIVE)
   qrCodeUrl        String?
   
   gradeLevelId     String?
@@ -74,6 +101,7 @@ model StudentProfile {
   parents          ParentProfile[] @relation("StudentParents")
   
   enrollments      SubjectEnrollment[]
+  academicRecords  Enrollment[]
   attendance       AttendanceRecord[]
   grades           Grade[]
   quizSubmissions  QuizSubmission[]
@@ -88,11 +116,11 @@ enum Gender {
 }
 
 enum EnrollmentStatus {
-  ENROLLED
+  ACTIVE
+  PROMOTED
+  RETAINED
   DROPPED
   GRADUATED
-  TRANSFERRED
-  PENDING
 }
 
 model TeacherProfile {
@@ -169,6 +197,7 @@ model AcademicYear {
   grades      Grade[]
   timetables  Timetable[]
   invoices    Invoice[]
+  academicRecords Enrollment[]
 }
 
 model Department {
@@ -198,6 +227,7 @@ model GradeLevel {
   students    StudentProfile[]
   subjects    Subject[]
   feeStructures FeeStructure[]
+  academicRecords Enrollment[]
 }
 
 model Section {
@@ -216,6 +246,7 @@ model Section {
 
   students     StudentProfile[]
   enrollments  SubjectEnrollment[]
+  academicRecords Enrollment[]
   sectionSubjects SectionSubject[]
   attendance   AttendanceRecord[]
   groupChat    GroupChat?

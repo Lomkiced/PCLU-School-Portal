@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import Link from "next/link";
 import {
     GraduationCap, UserPlus, Users, ChevronRight,
-    Loader2, AlertCircle, UserCheck, UserX,
+    Loader2, AlertCircle, UserCheck, UserX, FastForward,
 } from "lucide-react";
 
 interface Stats {
@@ -88,11 +88,11 @@ export default function StudentsHubPage() {
             </div>
 
             {/* Navigation Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Enrolled Card */}
                 <Link
                     href="/admin/students/enrolled"
-                    className="group bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))] card-shadow hover:card-shadow-lg hover:border-emerald-500/30 transition-all"
+                    className="group bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))] card-shadow hover:card-shadow-lg hover:border-emerald-500/30 transition-all flex flex-col"
                 >
                     <div className="flex items-start justify-between mb-4">
                         <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
@@ -100,12 +100,14 @@ export default function StudentsHubPage() {
                         </div>
                         <ChevronRight className="w-5 h-5 text-[hsl(var(--muted-foreground))] group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
                     </div>
-                    <h3 className="text-lg font-bold group-hover:text-emerald-500 transition-colors">
-                        Enrolled Students
-                    </h3>
-                    <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                        View and manage students currently assigned to a grade level and section.
-                    </p>
+                    <div className="flex-1">
+                        <h3 className="text-lg font-bold group-hover:text-emerald-500 transition-colors">
+                            Enrolled Students
+                        </h3>
+                        <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                            View and manage students currently assigned to a grade level and section.
+                        </p>
+                    </div>
                     <div className="mt-4 flex items-center gap-2">
                         <span className="inline-flex px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs font-bold">
                             {stats.enrolled} students
@@ -116,7 +118,7 @@ export default function StudentsHubPage() {
                 {/* Unenrolled Card */}
                 <Link
                     href="/admin/students/unenrolled"
-                    className="group bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))] card-shadow hover:card-shadow-lg hover:border-amber-500/30 transition-all"
+                    className="group bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))] card-shadow hover:card-shadow-lg hover:border-amber-500/30 transition-all flex flex-col"
                 >
                     <div className="flex items-start justify-between mb-4">
                         <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
@@ -124,15 +126,43 @@ export default function StudentsHubPage() {
                         </div>
                         <ChevronRight className="w-5 h-5 text-[hsl(var(--muted-foreground))] group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
                     </div>
-                    <h3 className="text-lg font-bold group-hover:text-amber-500 transition-colors">
-                        Unenrolled Students
-                    </h3>
-                    <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                        View newly registered students who still need to be assigned a class and section.
-                    </p>
+                    <div className="flex-1">
+                        <h3 className="text-lg font-bold group-hover:text-amber-500 transition-colors">
+                            Unenrolled Students
+                        </h3>
+                        <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                            View newly registered students who still need to be assigned a class and section.
+                        </p>
+                    </div>
                     <div className="mt-4 flex items-center gap-2">
                         <span className="inline-flex px-3 py-1 rounded-lg bg-amber-500/10 text-amber-600 text-xs font-bold">
                             {stats.unenrolled} students
+                        </span>
+                    </div>
+                </Link>
+
+                {/* Promotion Card */}
+                <Link
+                    href="/admin/students/promotion"
+                    className="group bg-[hsl(var(--primary)/0.02)] rounded-2xl p-6 border border-[hsl(var(--primary)/0.2)] card-shadow hover:card-shadow-lg hover:border-[hsl(var(--primary)/0.5)] transition-all flex flex-col"
+                >
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-[hsl(var(--primary)/0.1)] flex items-center justify-center">
+                            <FastForward className="w-6 h-6 text-[hsl(var(--primary))]" />
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-[hsl(var(--primary)/0.5)] group-hover:text-[hsl(var(--primary))] group-hover:translate-x-1 transition-all" />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-lg font-bold text-[hsl(var(--primary))]">
+                            Academic Rollover
+                        </h3>
+                        <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                            Batch evaluate and promote students to the next academic year seamlessly.
+                        </p>
+                    </div>
+                    <div className="mt-4 flex flex-col justify-end">
+                        <span className="inline-flex items-center gap-2 text-xs font-bold text-[hsl(var(--primary))] uppercase tracking-wider">
+                            Promotion Wizard <FastForward className="w-3 h-3" />
                         </span>
                     </div>
                 </Link>

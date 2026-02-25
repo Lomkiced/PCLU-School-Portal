@@ -50,4 +50,48 @@ export class EnrollmentsService {
             include: { subject: true, section: true }
         });
     }
+
+    async promoteBatch(data: { studentIds: string[]; sourceAcademicYearId: string; targetAcademicYearId: string; targetGradeLevelId: string; }) {
+        if (!data.studentIds || data.studentIds.length === 0) {
+            throw new BadRequestException('No students selected for promotion.');
+        }
+
+        return this.prisma.$transaction(async (tx) => {
+            // Update old historical records to PROMOTED
+            await tx.enrollment.updateMany({
+                where: {
+                    studentId: { in: data.studentIds },
+                    academicYearId: data.sourceAcademicYearId
+                },
+                data: {
+                    status: 'PROMOTED'
+                }
+            });
+
+            // Rollover: Create NEW fresh enrollments for the next target year
+            await tx.enrollment.createMany({
+                data: data.studentIds.map(studentId => ({
+                    studentId,
+                    academicYearId: data.targetAcademicYearId,
+                    gradeLevelId: data.targetGradeLevelId,
+                    status: 'ACTIVE'
+                })),
+                skipDuplicates: true
+            });
+
+            // Update the master student profiles to point to the new grade level
+            await tx.studentProfile.updateMany({
+                where: {
+                    id: { in: data.studentIds }
+                },
+                data: {
+                    gradeLevelId: data.targetGradeLevelId,
+                    sectionId: null, // Strip their section so they can be assigned later
+                    enrollmentStatus: 'ACTIVE'
+                }
+            });
+
+            return { promotedCount: data.studentIds.length };
+        });
+    }
 }

@@ -118,7 +118,7 @@ export class FinanceService {
 
     async getStudentLedgersByGrade(gradeLevelId: string) {
         const students = await this.prisma.studentProfile.findMany({
-            where: { gradeLevelId, enrollmentStatus: 'ENROLLED' },
+            where: { gradeLevelId, enrollmentStatus: 'ACTIVE' },
             include: { user: true }
         });
 
@@ -192,7 +192,7 @@ export class FinanceService {
     async generateInvoiceBatch(gradeLevelId: string, feeStructureId: string) {
         // Fetch students actively enrolled in this grade level
         const students = await this.prisma.studentProfile.findMany({
-            where: { gradeLevelId, enrollmentStatus: 'ENROLLED' },
+            where: { gradeLevelId, enrollmentStatus: 'ACTIVE' },
             select: { id: true }
         });
 

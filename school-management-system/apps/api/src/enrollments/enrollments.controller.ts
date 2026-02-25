@@ -31,4 +31,14 @@ export class EnrollmentsController {
             data: await this.enrollmentsService.getEnrollments(studentId, academicYearId)
         };
     }
+
+    @Roles('ADMIN')
+    @Post('promote/batch')
+    async promoteBatch(@Body() body: any) {
+        return {
+            success: true,
+            data: await this.enrollmentsService.promoteBatch(body),
+            message: 'Students promoted successfully'
+        };
+    }
 }

@@ -54,7 +54,7 @@ export class StudentsService {
                             guardianName: `${data.parent.firstName} ${data.parent.lastName}`,
                             guardianRelation: data.parent.occupation,
                             guardianContact: data.parent.contactNumber,
-                            enrollmentStatus: EnrollmentStatus.PENDING,
+                            enrollmentStatus: EnrollmentStatus.ACTIVE,
                         },
                     },
                 },
@@ -94,7 +94,7 @@ export class StudentsService {
     async findEnrolled(params: { search?: string; gradeLevelId?: string }) {
         return this.prisma.studentProfile.findMany({
             where: {
-                enrollmentStatus: EnrollmentStatus.ENROLLED,
+                enrollmentStatus: EnrollmentStatus.ACTIVE,
                 sectionId: { not: null },
                 ...(params.gradeLevelId ? { gradeLevelId: params.gradeLevelId } : {}),
                 ...(params.search
@@ -125,7 +125,7 @@ export class StudentsService {
             where: {
                 OR: [
                     { sectionId: null },
-                    { enrollmentStatus: { in: [EnrollmentStatus.PENDING, EnrollmentStatus.DROPPED] } },
+                    { enrollmentStatus: EnrollmentStatus.DROPPED },
                 ],
                 ...(params.search
                     ? {
@@ -200,7 +200,7 @@ export class StudentsService {
             data: {
                 gradeLevelId: data.gradeLevelId,
                 sectionId: data.sectionId,
-                enrollmentStatus: EnrollmentStatus.ENROLLED,
+                enrollmentStatus: EnrollmentStatus.ACTIVE,
             },
             include: {
                 gradeLevel: true,
