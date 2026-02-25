@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
 export default function AdminSettingsPage() {
     return (
         <div className="space-y-6 max-w-2xl">
@@ -8,23 +11,14 @@ export default function AdminSettingsPage() {
 
             {/* Academic Year */}
             <div className="bg-[hsl(var(--card))] rounded-2xl p-6 card-shadow border border-[hsl(var(--border))] space-y-4">
-                <h3 className="font-bold">Academic Year</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Current AY</label>
-                        <select className="w-full px-4 py-2.5 rounded-xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]">
-                            <option>AY 2025-2026</option>
-                            <option>AY 2024-2025</option>
-                        </select>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h3 className="font-bold text-lg">Academic Year & Grading Config</h3>
+                        <p className="text-sm text-muted-foreground mt-1">Manage the underlying timeline for the school, including grading period weightages and active semesters.</p>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Semester</label>
-                        <select className="w-full px-4 py-2.5 rounded-xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]">
-                            <option>2nd Semester</option>
-                            <option>1st Semester</option>
-                            <option>Summer</option>
-                        </select>
-                    </div>
+                    <Link href="/admin/settings/academic-years">
+                        <Button>Configure Timeline</Button>
+                    </Link>
                 </div>
             </div>
 
@@ -42,8 +36,8 @@ export default function AdminSettingsPage() {
                             <span className="text-sm font-medium">{setting.label}</span>
                             <button
                                 className={`w-11 h-6 rounded-full transition-colors relative ${setting.checked
-                                        ? "bg-[hsl(var(--primary))]"
-                                        : "bg-[hsl(var(--muted-foreground)/0.2)]"
+                                    ? "bg-[hsl(var(--primary))]"
+                                    : "bg-[hsl(var(--muted-foreground)/0.2)]"
                                     }`}
                             >
                                 <div

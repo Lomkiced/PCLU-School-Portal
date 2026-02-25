@@ -112,7 +112,7 @@ export default function ScheduleBuilderPage() {
             setTimeslots(tsRes.data.data || []);
             setTeachers(teachRes.data.data?.data || teachRes.data.data || []);
             setRooms(roomRes.data.data || []);
-            setActiveAy(ayRes.data.data?.find((ay: any) => ay.isActive) || ayRes.data.data?.[0]);
+            setActiveAy(ayRes.data.data?.find((ay: any) => ay.status === 'ACTIVE') || ayRes.data.data?.[0]);
             setInheritedSubjects(inheritedRes.data.data || []);
             // Debug the inherited subjects mapping
             console.log("Inherited Subjects Mapping:", inheritedRes.data.data);

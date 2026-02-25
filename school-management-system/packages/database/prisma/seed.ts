@@ -35,10 +35,10 @@ async function main() {
     console.log('Creating Academic Year...');
     const academicYear = await prisma.academicYear.create({
         data: {
-            label: 'SY 2024-2025',
+            name: 'SY 2024-2025',
             startDate: new Date('2024-08-01'),
             endDate: new Date('2025-05-30'),
-            isActive: true,
+            status: 'ACTIVE',
         }
     });
 
@@ -116,7 +116,7 @@ async function main() {
                             guardianName: 'Parent Doe',
                             guardianRelation: 'MTH',
                             guardianContact: '09990000000',
-                            enrollmentStatus: EnrollmentStatus.ENROLLED,
+                            enrollmentStatus: EnrollmentStatus.ACTIVE,
                             sectionId: section.id,
                             gradeLevelId: section.gradeLevelId,
                         }

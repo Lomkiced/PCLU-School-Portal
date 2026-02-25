@@ -58,7 +58,7 @@ export class SectionsController {
     ) {
         let academicYearId = body.academicYearId;
         if (!academicYearId) {
-            const ay = await this.sectionsService['prisma'].academicYear.findFirst({ where: { isActive: true } });
+            const ay = await this.sectionsService['prisma'].academicYear.findFirst({ where: { status: 'ACTIVE' } });
             if (!ay) throw new Error("No active academic year found");
             academicYearId = ay.id;
         }

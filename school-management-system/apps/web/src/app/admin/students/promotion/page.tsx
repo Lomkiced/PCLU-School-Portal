@@ -51,7 +51,7 @@ export default function PromotionWizardPage() {
             setGradeLevels(glRes.data.data || []);
 
             // Auto-select active AY for source
-            const activeAy = ayRes.data.data?.find((ay: any) => ay.isActive);
+            const activeAy = ayRes.data.data?.find((ay: any) => ay.status === 'ACTIVE');
             if (activeAy) setSourceAyId(activeAy.id);
         } catch (error) {
             toast.error("Failed to load initial configuration data.");

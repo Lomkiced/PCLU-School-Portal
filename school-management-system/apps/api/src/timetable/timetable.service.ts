@@ -25,7 +25,7 @@ export class TimetableService {
 
             const timetable = await tx.timetable.create({
                 data: {
-                    name: `Master Schedule - ${ay.label}`,
+                    name: `Master Schedule - ${ay.name}`,
                     academicYearId: ay.id,
                     status: 'DRAFT',
                 }
@@ -156,7 +156,7 @@ export class TimetableService {
             if (!ay) throw new NotFoundException('Academic Year not found');
             timetable = await this.prisma.timetable.create({
                 data: {
-                    name: `Master Schedule - ${ay.label}`,
+                    name: `Master Schedule - ${ay.name}`,
                     academicYearId: ay.id,
                     status: 'DRAFT'
                 }

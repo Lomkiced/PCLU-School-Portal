@@ -59,7 +59,7 @@ export class SectionsService {
 
         // Get active academic year if not provided
         if (!academicYearId) {
-            const ay = await this.prisma.academicYear.findFirst({ where: { isActive: true } });
+            const ay = await this.prisma.academicYear.findFirst({ where: { status: 'ACTIVE' } });
             if (!ay) throw new BadRequestException('No active academic year found');
             academicYearId = ay.id;
         }

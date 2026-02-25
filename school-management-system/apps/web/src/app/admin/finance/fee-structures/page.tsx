@@ -64,7 +64,7 @@ export default function FeeStructuresPage() {
         setLoading(true);
         try {
             // Fetch Active Academic Year
-            const ayRes = await api.get('/academic-years?isActive=true');
+            const ayRes = await api.get('/academic-years?status=ACTIVE');
             const ay = ayRes.data.data[0];
             setActiveAy(ay);
 
