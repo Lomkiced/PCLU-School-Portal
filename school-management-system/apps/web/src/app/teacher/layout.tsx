@@ -36,9 +36,15 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     const [mobileOpen, setMobileOpen] = useState(false);
 
     useEffect(() => { hydrate(); }, [hydrate]);
-    useEffect(() => { if (!isAuthenticated) router.push("/login"); }, [isAuthenticated, router]);
+    useEffect(() => {
+        if (!isAuthenticated) {
+            router.push("/login");
+        } else if (user && !["TEACHER", "FACULTY"].includes((user.role || "").toUpperCase())) {
+            router.push("/login");
+        }
+    }, [isAuthenticated, user, router]);
 
-    if (!isAuthenticated) return null;
+    if (!isAuthenticated || (user && !["TEACHER", "FACULTY"].includes((user.role || "").toUpperCase()))) return null;
 
     return (
         <div className="flex h-screen overflow-hidden">

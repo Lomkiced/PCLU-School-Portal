@@ -171,7 +171,7 @@ export function DataTable<T extends Record<string, any>>({
                                             </td>
                                         ))}
                                         {actions && (
-                                            <td className="px-5 py-4 text-right">{actions(item)}</td>
+                                            <td key="actions" className="px-5 py-4 text-right">{actions(item)}</td>
                                         )}
                                     </tr>
                                 ))

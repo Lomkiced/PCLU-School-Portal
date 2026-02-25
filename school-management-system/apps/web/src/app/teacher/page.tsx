@@ -2,13 +2,15 @@
 
 import { GraduationCap, BookOpen, ClipboardCheck, ScanLine, Clock } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function TeacherDashboard() {
+    const { user } = useAuthStore();
     return (
         <div className="space-y-8">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold">Good Morning, Professor! 📖</h2>
+                    <h2 className="text-2xl font-bold">Good Morning, {user?.email?.split('@')[0] || "Professor"}! 📖</h2>
                     <p className="text-[hsl(var(--muted-foreground))] text-sm mt-1">
                         Your teaching overview for today.
                     </p>
