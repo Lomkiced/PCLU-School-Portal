@@ -22,7 +22,6 @@ import { QuizzesModule } from './lms/quizzes/quizzes.module';
 import { ActivitiesModule } from './lms/activities/activities.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { MessagesModule } from './messages/messages.module';
-import { GroupChatsModule } from './group-chats/group-chats.module';
 import { FinanceModule } from './finance/finance.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { FileUploadModule } from './file-upload/file-upload.module';
@@ -34,7 +33,7 @@ import { WebsocketModule } from './websocket/websocket.module';
 import { LmsModule } from './lms/lms.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, StudentsModule, TeachersModule, ParentsModule, AcademicYearsModule, DepartmentsModule, GradeLevelsModule, SectionsModule, RoomsModule, SubjectsModule, EnrollmentsModule, TimetableModule, AttendanceModule, GradesModule, AnnouncementsModule, MessagesModule, GroupChatsModule, FinanceModule, NotificationsModule, FileUploadModule, AiGradingModule, IdGeneratorModule, CredentialsModule, WebsocketModule, LmsModule],
+  imports: [PrismaModule, AuthModule, UsersModule, StudentsModule, TeachersModule, ParentsModule, AcademicYearsModule, DepartmentsModule, GradeLevelsModule, SectionsModule, RoomsModule, SubjectsModule, EnrollmentsModule, TimetableModule, AttendanceModule, GradesModule, AnnouncementsModule, MessagesModule, FinanceModule, NotificationsModule, FileUploadModule, AiGradingModule, IdGeneratorModule, CredentialsModule, WebsocketModule, LmsModule],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -63,9 +63,8 @@ model User {
   adminProfile   AdminProfile?
 
   // Generic Relations
-  sentMessages     Message[]         @relation("SentMessages")
-  receivedMessages Message[]         @relation("ReceivedMessages")
-  groupMemberships GroupChatMember[]
+  conversationParticipants ConversationParticipant[]
+  messages         Message[]
   notifications    Notification[]
   credential       Credential?
   announcements    Announcement[]    @relation("AnnouncementAuthor")
@@ -278,7 +277,6 @@ model Section {
   academicRecords Enrollment[]
   sectionSubjects SectionSubject[]
   attendance   AttendanceRecord[]
-  groupChat    GroupChat?
   quizzes      Quiz[]
   activities   Activity[]
   lmsContents  LMSContent[]
@@ -788,55 +786,63 @@ model AnnouncementReadReceipt {
   @@unique([announcementId, userId])
 }
 
+// ==========================================
+// MESSAGING HUB (Omnichannel)
+// ==========================================
+
+enum ConversationType {
+  DIRECT
+  GROUP
+  ANNOUNCEMENT
+}
+
+enum ConversationRole {
+  ADMIN
+  MEMBER
+  MUTED
+}
+
+model Conversation {
+  id          String           @id @default(uuid())
+  title       String?          // Optional: used for group/announcement names
+  type        ConversationType
+  
+  participants ConversationParticipant[]
+  messages     Message[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ConversationParticipant {
+  id              String           @id @default(uuid())
+  
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  conversationId  String
+  conversation    Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  role            ConversationRole @default(MEMBER)
+  lastReadAt      DateTime         @default(now())
+  
+  @@unique([userId, conversationId])
+}
+
 model Message {
-  id          String   @id @default(uuid())
+  id              String       @id @default(uuid())
   
-  senderId    String
-  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   
-  recipientId String
-  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
   
-  body        String   @db.Text
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-}
-
-model GroupChat {
-  id          String   @id @default(uuid())
-  name        String
+  content         String       @db.Text
+  attachmentUrl   String?
+  isDeleted       Boolean      @default(false)
   
-  sectionId   String?  @unique
-  section     Section? @relation(fields: [sectionId], references: [id])
-  
-  messages    GroupChatMessage[]
-  members     GroupChatMember[]
-}
-
-model GroupChatMessage {
-  id          String   @id @default(uuid())
-  
-  chatId      String
-  chat        GroupChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  
-  senderId    String
-  // Usually mapping to User to keep generic
-  
-  body        String   @db.Text
-  attachments Json?    // string[]
-  createdAt   DateTime @default(now())
-}
-
-model GroupChatMember {
-  id          String   @id @default(uuid())
-  
-  chatId      String
-  chat        GroupChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([chatId, userId])
+  createdAt       DateTime     @default(now())
 }
 
 enum NotificationType {

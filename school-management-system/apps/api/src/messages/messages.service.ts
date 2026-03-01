@@ -1,58 +1,315 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MessagesService {
+    private readonly logger = new Logger(MessagesService.name);
+
     constructor(private prisma: PrismaService) { }
 
-    async sendMessage(senderId: string, recipientId: string, body: string) {
-        return this.prisma.message.create({
-            data: { senderId, recipientId, body }
-        });
-    }
-
-    async getConversation(userId1: string, userId2: string) {
-        return this.prisma.message.findMany({
+    /**
+     * Get all conversations for a user, with latest message and participant info.
+     */
+    async getUserConversations(userId: string) {
+        const conversations = await this.prisma.conversation.findMany({
             where: {
-                OR: [
-                    { senderId: userId1, recipientId: userId2 },
-                    { senderId: userId2, recipientId: userId1 }
-                ]
+                participants: { some: { userId } },
             },
-            orderBy: { createdAt: 'asc' }
-        });
-    }
-
-    async getInbox(userId: string) {
-        const messages = await this.prisma.message.findMany({
-            where: {
-                OR: [{ senderId: userId }, { recipientId: userId }]
-            },
-            orderBy: { createdAt: 'desc' },
             include: {
-                sender: { select: { id: true, email: true, profilePicture: true, role: true } },
-                recipient: { select: { id: true, email: true, profilePicture: true, role: true } }
-            }
+                participants: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                email: true,
+                                role: true,
+                                profilePicture: true,
+                                studentProfile: { select: { firstName: true, lastName: true } },
+                                teacherProfile: { select: { firstName: true, lastName: true } },
+                                adminProfile: { select: { firstName: true, lastName: true } },
+                                parentProfile: { select: { firstName: true, lastName: true } },
+                            },
+                        },
+                    },
+                },
+                messages: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    include: {
+                        sender: {
+                            select: {
+                                id: true,
+                                email: true,
+                                role: true,
+                                profilePicture: true,
+                                studentProfile: { select: { firstName: true, lastName: true } },
+                                teacherProfile: { select: { firstName: true, lastName: true } },
+                                adminProfile: { select: { firstName: true, lastName: true } },
+                                parentProfile: { select: { firstName: true, lastName: true } },
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { updatedAt: 'desc' },
         });
 
-        const uniqueConversations = new Map<string, any>();
-        for (const m of messages) {
-            const otherUser = m.senderId === userId ? m.recipient : m.sender;
-            if (!uniqueConversations.has(otherUser.id)) {
-                uniqueConversations.set(otherUser.id, {
-                    user: otherUser,
-                    lastMessage: m
+        // Attach unread count for each conversation
+        return Promise.all(
+            conversations.map(async (conv) => {
+                const participant = conv.participants.find((p) => p.userId === userId);
+                const unreadCount = await this.prisma.message.count({
+                    where: {
+                        conversationId: conv.id,
+                        createdAt: { gt: participant?.lastReadAt ?? new Date(0) },
+                        senderId: { not: userId },
+                        isDeleted: false,
+                    },
                 });
-            }
+                return { ...conv, unreadCount };
+            }),
+        );
+    }
+
+    /**
+     * Get paginated message history for a conversation.
+     */
+    async getConversationMessages(
+        conversationId: string,
+        userId: string,
+        cursor?: string,
+        limit = 50,
+    ) {
+        // Verify user is a participant
+        const participant = await this.prisma.conversationParticipant.findUnique({
+            where: { userId_conversationId: { userId, conversationId } },
+        });
+        if (!participant) {
+            throw new ForbiddenException('You are not a participant in this conversation');
         }
 
-        return Array.from(uniqueConversations.values());
+        const where = {
+            conversationId,
+            isDeleted: false,
+        };
+
+        const messages = await this.prisma.message.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: limit + 1,
+            ...(cursor && {
+                cursor: { id: cursor },
+                skip: 1,
+            }),
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        email: true,
+                        role: true,
+                        profilePicture: true,
+                        studentProfile: { select: { firstName: true, lastName: true } },
+                        teacherProfile: { select: { firstName: true, lastName: true } },
+                        adminProfile: { select: { firstName: true, lastName: true } },
+                        parentProfile: { select: { firstName: true, lastName: true } },
+                    },
+                },
+            },
+        });
+
+        const hasMore = messages.length > limit;
+        const data = hasMore ? messages.slice(0, limit) : messages;
+
+        return {
+            messages: data.reverse(), // Oldest first for display
+            nextCursor: hasMore ? data[0]?.id : null,
+        };
     }
 
-    async markAsRead(messageId: string) {
-        return this.prisma.message.update({
-            where: { id: messageId },
-            data: { isRead: true }
+    /**
+     * Create a new message in a conversation.
+     */
+    async createMessage(
+        conversationId: string,
+        senderId: string,
+        content: string,
+        attachmentUrl?: string,
+    ) {
+        // Verify sender is a participant
+        const participant = await this.prisma.conversationParticipant.findUnique({
+            where: { userId_conversationId: { userId: senderId, conversationId } },
+        });
+        if (!participant) {
+            throw new ForbiddenException('You are not a participant in this conversation');
+        }
+        if (participant.role === 'MUTED') {
+            throw new ForbiddenException('You are muted in this conversation');
+        }
+
+        const message = await this.prisma.message.create({
+            data: {
+                conversationId,
+                senderId,
+                content,
+                attachmentUrl,
+            },
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        email: true,
+                        role: true,
+                        profilePicture: true,
+                        studentProfile: { select: { firstName: true, lastName: true } },
+                        teacherProfile: { select: { firstName: true, lastName: true } },
+                        adminProfile: { select: { firstName: true, lastName: true } },
+                        parentProfile: { select: { firstName: true, lastName: true } },
+                    },
+                },
+            },
+        });
+
+        // Update conversation's updatedAt
+        await this.prisma.conversation.update({
+            where: { id: conversationId },
+            data: { updatedAt: new Date() },
+        });
+
+        // Update sender's lastReadAt
+        await this.prisma.conversationParticipant.update({
+            where: { userId_conversationId: { userId: senderId, conversationId } },
+            data: { lastReadAt: new Date() },
+        });
+
+        return message;
+    }
+
+    /**
+     * Get or create a direct conversation between two users.
+     */
+    async getOrCreateDirectConversation(userId1: string, userId2: string) {
+        this.logger.log(`getOrCreateDirectConversation: userId1=${userId1}, userId2=${userId2}`);
+
+        try {
+            // Find existing DIRECT conversation where both users are participants
+            const existing = await this.prisma.conversation.findFirst({
+                where: {
+                    type: 'DIRECT',
+                    AND: [
+                        { participants: { some: { userId: userId1 } } },
+                        { participants: { some: { userId: userId2 } } },
+                    ],
+                },
+                include: {
+                    participants: {
+                        include: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    email: true,
+                                    role: true,
+                                    profilePicture: true,
+                                    studentProfile: { select: { firstName: true, lastName: true } },
+                                    teacherProfile: { select: { firstName: true, lastName: true } },
+                                    adminProfile: { select: { firstName: true, lastName: true } },
+                                    parentProfile: { select: { firstName: true, lastName: true } },
+                                },
+                            },
+                        },
+                    },
+                    messages: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1,
+                    },
+                },
+            });
+
+            if (existing) return existing;
+
+            // Create new DIRECT conversation
+            return this.prisma.conversation.create({
+                data: {
+                    type: 'DIRECT',
+                    participants: {
+                        create: [
+                            { userId: userId1 },
+                            { userId: userId2 },
+                        ],
+                    },
+                },
+                include: {
+                    participants: {
+                        include: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    email: true,
+                                    role: true,
+                                    profilePicture: true,
+                                    studentProfile: { select: { firstName: true, lastName: true } },
+                                    teacherProfile: { select: { firstName: true, lastName: true } },
+                                    adminProfile: { select: { firstName: true, lastName: true } },
+                                    parentProfile: { select: { firstName: true, lastName: true } },
+                                },
+                            },
+                        },
+                    },
+                    messages: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1,
+                    },
+                },
+            });
+        } catch (error) {
+            this.logger.error(`Failed to get/create direct conversation: ${error.message}`, error.stack);
+            throw new InternalServerErrorException(`Failed to create conversation: ${error.message}`);
+        }
+    }
+
+    /**
+     * Search users for the "New Message" dialog.
+     */
+    async searchUsers(query: string, currentUserId: string) {
+        if (!query || query.trim().length < 2) return [];
+
+        const q = query.trim();
+
+        return this.prisma.user.findMany({
+            where: {
+                id: { not: currentUserId },
+                OR: [
+                    { email: { contains: q, mode: 'insensitive' } },
+                    { studentProfile: { firstName: { contains: q, mode: 'insensitive' } } },
+                    { studentProfile: { lastName: { contains: q, mode: 'insensitive' } } },
+                    { teacherProfile: { firstName: { contains: q, mode: 'insensitive' } } },
+                    { teacherProfile: { lastName: { contains: q, mode: 'insensitive' } } },
+                    { adminProfile: { firstName: { contains: q, mode: 'insensitive' } } },
+                    { adminProfile: { lastName: { contains: q, mode: 'insensitive' } } },
+                    { parentProfile: { firstName: { contains: q, mode: 'insensitive' } } },
+                    { parentProfile: { lastName: { contains: q, mode: 'insensitive' } } },
+                ],
+            },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                profilePicture: true,
+                studentProfile: { select: { firstName: true, lastName: true } },
+                teacherProfile: { select: { firstName: true, lastName: true } },
+                adminProfile: { select: { firstName: true, lastName: true } },
+                parentProfile: { select: { firstName: true, lastName: true } },
+            },
+            take: 20,
+        });
+    }
+
+    /**
+     * Mark a conversation as read for a user.
+     */
+    async markAsRead(userId: string, conversationId: string) {
+        return this.prisma.conversationParticipant.update({
+            where: { userId_conversationId: { userId, conversationId } },
+            data: { lastReadAt: new Date() },
         });
     }
 }

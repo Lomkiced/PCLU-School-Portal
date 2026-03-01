@@ -10,25 +10,29 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { MessagesService } from '../messages/messages.service';
-import { GroupChatsService } from '../group-chats/group-chats.service';
+
+interface AuthenticatedSocket extends Socket {
+    userId?: string;
+}
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
     server: Server;
 
-    // Map userId to socketId
-    private connectedUsers = new Map<string, string>();
+    // Map userId → socketId(s)
+    private connectedUsers = new Map<string, Set<string>>();
 
     constructor(
         private jwtService: JwtService,
         private messagesService: MessagesService,
-        private groupChatsService: GroupChatsService,
     ) { }
 
-    async handleConnection(client: Socket) {
+    async handleConnection(client: AuthenticatedSocket) {
         try {
-            const authHeader = client.handshake.headers['authorization'] || client.handshake.headers['Authorization'];
+            const authHeader =
+                client.handshake.headers['authorization'] ||
+                client.handshake.headers['Authorization'];
             let token = client.handshake.auth?.token;
 
             if (!token && typeof authHeader === 'string') {
@@ -42,15 +46,21 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
             });
 
             const userId = payload.sub;
-            this.connectedUsers.set(userId, client.id);
+            client.userId = userId;
 
-            // Join a personal room for direct messages
-            client.join(userId);
+            // Track connected sockets (support multiple tabs)
+            if (!this.connectedUsers.has(userId)) {
+                this.connectedUsers.set(userId, new Set());
+            }
+            this.connectedUsers.get(userId)!.add(client.id);
 
-            // Join group chat rooms
-            const groupChats = await this.groupChatsService.getUserGroupChats(userId);
-            for (const chat of groupChats) {
-                client.join(`chat_${chat.id}`);
+            // Join personal room
+            client.join(`user_${userId}`);
+
+            // Join all conversation rooms the user belongs to
+            const conversations = await this.messagesService.getUserConversations(userId);
+            for (const conv of conversations) {
+                client.join(`conversation_${conv.id}`);
             }
 
             console.log(`Client connected: ${client.id} (User: ${userId})`);
@@ -60,47 +70,65 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
-    handleDisconnect(client: Socket) {
-        for (const [userId, socketId] of this.connectedUsers.entries()) {
-            if (socketId === client.id) {
-                this.connectedUsers.delete(userId);
-                break;
+    handleDisconnect(client: AuthenticatedSocket) {
+        if (client.userId) {
+            const sockets = this.connectedUsers.get(client.userId);
+            if (sockets) {
+                sockets.delete(client.id);
+                if (sockets.size === 0) {
+                    this.connectedUsers.delete(client.userId);
+                }
             }
         }
     }
 
-    @SubscribeMessage('sendDirectMessage')
-    async handleDirectMessage(
-        @MessageBody() data: { recipientId: string; body: string },
-        @ConnectedSocket() client: Socket,
+    @SubscribeMessage('join-conversation')
+    async handleJoinConversation(
+        @MessageBody() data: { conversationId: string },
+        @ConnectedSocket() client: AuthenticatedSocket,
     ) {
-        let senderId: string = '';
-        for (const [uId, sId] of this.connectedUsers.entries()) {
-            if (sId === client.id) senderId = uId;
-        }
+        if (!client.userId) return;
+        client.join(`conversation_${data.conversationId}`);
+        client.emit('joined-conversation', { conversationId: data.conversationId });
+    }
 
-        if (senderId) {
-            const message = await this.messagesService.sendMessage(senderId, data.recipientId, data.body);
+    @SubscribeMessage('send-message')
+    async handleSendMessage(
+        @MessageBody()
+        data: { conversationId: string; content: string; attachmentUrl?: string },
+        @ConnectedSocket() client: AuthenticatedSocket,
+    ) {
+        if (!client.userId) return;
 
-            this.server.to(data.recipientId).emit('newDirectMessage', message);
-            this.server.to(senderId).emit('newDirectMessage', message);
+        try {
+            const message = await this.messagesService.createMessage(
+                data.conversationId,
+                client.userId,
+                data.content,
+                data.attachmentUrl,
+            );
+
+            // Broadcast to all participants in the conversation room
+            this.server
+                .to(`conversation_${data.conversationId}`)
+                .emit('new-message', message);
+        } catch (error) {
+            client.emit('message-error', { error: error.message });
         }
     }
 
-    @SubscribeMessage('sendGroupMessage')
-    async handleGroupMessage(
-        @MessageBody() data: { chatId: string; body: string; attachments?: string[] },
-        @ConnectedSocket() client: Socket,
+    @SubscribeMessage('mark-read')
+    async handleMarkRead(
+        @MessageBody() data: { conversationId: string },
+        @ConnectedSocket() client: AuthenticatedSocket,
     ) {
-        let senderId: string = '';
-        for (const [uId, sId] of this.connectedUsers.entries()) {
-            if (sId === client.id) senderId = uId;
-        }
+        if (!client.userId) return;
 
-        if (senderId) {
-            const message = await this.groupChatsService.sendMessage(data.chatId, senderId, data.body, data.attachments);
-
-            this.server.to(`chat_${data.chatId}`).emit('newGroupMessage', message);
+        try {
+            await this.messagesService.markAsRead(client.userId, data.conversationId);
+            client.emit('marked-read', { conversationId: data.conversationId });
+        } catch (error) {
+            client.emit('message-error', { error: error.message });
         }
     }
 }
