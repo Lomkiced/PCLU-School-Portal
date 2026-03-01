@@ -14,7 +14,7 @@ export class MessagesController {
     async getConversations(@CurrentUser() user: any) {
         return {
             success: true,
-            data: await this.messagesService.getUserConversations(user.sub),
+            data: await this.messagesService.getUserConversations(user.id),
         };
     }
 
@@ -27,7 +27,7 @@ export class MessagesController {
     ) {
         return {
             success: true,
-            data: await this.messagesService.getOrCreateDirectConversation(user.sub, body.recipientId),
+            data: await this.messagesService.getOrCreateDirectConversation(user.id, body.recipientId),
         };
     }
 
@@ -36,7 +36,7 @@ export class MessagesController {
     async searchUsers(@Query('q') query: string, @CurrentUser() user: any) {
         return {
             success: true,
-            data: await this.messagesService.searchUsers(query, user.sub),
+            data: await this.messagesService.searchUsers(query, user.id),
         };
     }
 
@@ -45,7 +45,7 @@ export class MessagesController {
     async markAsRead(@Param('id') conversationId: string, @CurrentUser() user: any) {
         return {
             success: true,
-            data: await this.messagesService.markAsRead(user.sub, conversationId),
+            data: await this.messagesService.markAsRead(user.id, conversationId),
         };
     }
 
@@ -62,7 +62,7 @@ export class MessagesController {
             success: true,
             data: await this.messagesService.getConversationMessages(
                 conversationId,
-                user.sub,
+                user.id,
                 cursor || undefined,
                 limit ? parseInt(limit, 10) : 50,
             ),

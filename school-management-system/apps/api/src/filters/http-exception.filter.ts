@@ -29,6 +29,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         }
 
         this.logger.error(`HTTP Status: ${status} Error Message: ${JSON.stringify(message)}`);
+        console.error('--- FULL EXCEPTION TRACE ---');
+        console.error(exception);
 
         response.status(status).json({
             success: false,

@@ -191,38 +191,77 @@ export class MessagesService {
         this.logger.log(`getOrCreateDirectConversation: userId1=${userId1}, userId2=${userId2}`);
 
         try {
-            // Find existing DIRECT conversation where both users are participants
-            const existing = await this.prisma.conversation.findFirst({
-                where: {
-                    type: 'DIRECT',
-                    AND: [
-                        { participants: { some: { userId: userId1 } } },
-                        { participants: { some: { userId: userId2 } } },
-                    ],
-                },
-                include: {
-                    participants: {
-                        include: {
-                            user: {
-                                select: {
-                                    id: true,
-                                    email: true,
-                                    role: true,
-                                    profilePicture: true,
-                                    studentProfile: { select: { firstName: true, lastName: true } },
-                                    teacherProfile: { select: { firstName: true, lastName: true } },
-                                    adminProfile: { select: { firstName: true, lastName: true } },
-                                    parentProfile: { select: { firstName: true, lastName: true } },
+            // Find existing DIRECT conversation
+            const isSelfChat = userId1 === userId2;
+
+            let existing;
+
+            if (isSelfChat) {
+                // For self-chats, find a direct conversation where ALL participants are just this user
+                existing = await this.prisma.conversation.findFirst({
+                    where: {
+                        type: 'DIRECT',
+                        participants: {
+                            every: { userId: userId1 } // No other users allowed
+                        }
+                    },
+                    include: {
+                        participants: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        email: true,
+                                        role: true,
+                                        profilePicture: true,
+                                        studentProfile: { select: { firstName: true, lastName: true } },
+                                        teacherProfile: { select: { firstName: true, lastName: true } },
+                                        adminProfile: { select: { firstName: true, lastName: true } },
+                                        parentProfile: { select: { firstName: true, lastName: true } },
+                                    },
                                 },
                             },
                         },
+                        messages: {
+                            orderBy: { createdAt: 'desc' },
+                            take: 1,
+                        },
                     },
-                    messages: {
-                        orderBy: { createdAt: 'desc' },
-                        take: 1,
+                });
+            } else {
+                // For normal DMs, find where both users are participants
+                existing = await this.prisma.conversation.findFirst({
+                    where: {
+                        type: 'DIRECT',
+                        AND: [
+                            { participants: { some: { userId: userId1 } } },
+                            { participants: { some: { userId: userId2 } } },
+                        ],
                     },
-                },
-            });
+                    include: {
+                        participants: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        email: true,
+                                        role: true,
+                                        profilePicture: true,
+                                        studentProfile: { select: { firstName: true, lastName: true } },
+                                        teacherProfile: { select: { firstName: true, lastName: true } },
+                                        adminProfile: { select: { firstName: true, lastName: true } },
+                                        parentProfile: { select: { firstName: true, lastName: true } },
+                                    },
+                                },
+                            },
+                        },
+                        messages: {
+                            orderBy: { createdAt: 'desc' },
+                            take: 1,
+                        },
+                    },
+                });
+            }
 
             if (existing) return existing;
 
@@ -231,10 +270,9 @@ export class MessagesService {
                 data: {
                     type: 'DIRECT',
                     participants: {
-                        create: [
-                            { userId: userId1 },
-                            { userId: userId2 },
-                        ],
+                        create: isSelfChat
+                            ? [{ userId: userId1 }]
+                            : [{ userId: userId1 }, { userId: userId2 }],
                     },
                 },
                 include: {
