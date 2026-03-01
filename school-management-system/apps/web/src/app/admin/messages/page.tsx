@@ -151,7 +151,7 @@ function formatFullTime(dateStr: string): string {
 export default function AdminMessagesPage() {
     const { user } = useAuthStore();
     const queryClient = useQueryClient();
-    const { isConnected, sendMessage, joinConversation, markAsRead } = useChat();
+    const { isConnected, sendMessage, joinConversation, markAsRead } = useChat(user?.id);
 
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [messageInput, setMessageInput] = useState("");
@@ -324,12 +324,18 @@ export default function AdminMessagesPage() {
         [user?.id]
     );
 
-    // ─── Filtered Conversations ───────────────────────────────────────────────
-    const filteredConversations = conversations.filter((conv) => {
-        if (!searchQuery.trim()) return true;
-        const name = getConversationDisplayName(conv).toLowerCase();
-        return name.includes(searchQuery.toLowerCase());
-    });
+    // ─── Filtered & Sorted Conversations ──────────────────────────────────────
+    const processedConversations = [...conversations]
+        .filter((conv) => {
+            if (!searchQuery.trim()) return true;
+            const name = getConversationDisplayName(conv).toLowerCase();
+            return name.includes(searchQuery.toLowerCase());
+        })
+        .sort((a, b) => {
+            const dateA = a.messages?.[0]?.createdAt || a.updatedAt || a.createdAt;
+            const dateB = b.messages?.[0]?.createdAt || b.updatedAt || b.createdAt;
+            return new Date(dateB).getTime() - new Date(dateA).getTime();
+        });
 
     // ─── Render ───────────────────────────────────────────────────────────────
     return (
@@ -462,7 +468,7 @@ export default function AdminMessagesPage() {
                         <div className="flex items-center justify-center py-12">
                             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                         </div>
-                    ) : filteredConversations.length === 0 ? (
+                    ) : processedConversations.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                             <MessageSquare className="w-12 h-12 text-muted-foreground/30 mb-3" />
                             <p className="text-sm font-semibold text-muted-foreground">
@@ -474,7 +480,7 @@ export default function AdminMessagesPage() {
                         </div>
                     ) : (
                         <div className="flex flex-col">
-                            {filteredConversations.map((conv) => {
+                            {processedConversations.map((conv) => {
                                 const isActive = activeConversationId === conv.id;
                                 const avatarUser = getConversationAvatar(conv);
                                 const ConvIcon = getConversationIcon(conv.type);

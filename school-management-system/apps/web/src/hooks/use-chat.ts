@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -27,7 +27,7 @@ export interface IncomingMessage {
     };
 }
 
-export function useChat() {
+export function useChat(currentUserId?: string) {
     const socketRef = useRef<Socket | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const queryClient = useQueryClient();
@@ -85,7 +85,11 @@ export function useChat() {
                     // Fallback for non-paginated cache structure just in case
                     if (Array.isArray(oldData)) {
                         if (oldData.some((m) => m.id === message.id)) return oldData;
-                        return [...oldData, message]; // Assuming chronological append
+                        return [message, ...oldData]; // Assuming chronological append
+                    }
+
+                    if (oldData.messages) {
+                        return { ...oldData, messages: [message, ...oldData.messages] };
                     }
 
                     return oldData;
@@ -106,18 +110,10 @@ export function useChat() {
                     return oldData;
                 }
 
-                const updatedConversations = [...oldData];
-                const convToUpdate = updatedConversations[conversationIndex];
-
-                // If I am not the sender, increment the unread count
-                // (Assuming we pass a 'currentUserId' down or checking our own state)
-                // For simplicity here, we assume if we receive it via WS it's a new interaction
-                const isSentByMe = false; // We would ideally check against our own token/ID here. We'll let the UI handle the isMe logic for unread count, or just refetch
-
                 // A cleaner approach for the snippet is to just invalidate the conversations list to let the server re-sort and calculate unread
                 queryClient.invalidateQueries({ queryKey: ["conversations"] });
 
-                return updatedConversations;
+                return oldData;
             });
         });
 
@@ -132,15 +128,92 @@ export function useChat() {
         };
     }, [queryClient]);
 
-    const sendMessage = useCallback(
-        (conversationId: string, content: string, attachmentUrl?: string) => {
-            socketRef.current?.emit("send-message", {
-                conversationId,
-                content,
-                attachmentUrl,
+    const { mutate: sendMessageMutation } = useMutation({
+        mutationFn: async ({
+            conversationId,
+            content,
+            attachmentUrl,
+        }: {
+            conversationId: string;
+            content: string;
+            attachmentUrl?: string;
+        }) => {
+            return new Promise<void>((resolve) => {
+                socketRef.current?.emit("send-message", {
+                    conversationId,
+                    content,
+                    attachmentUrl,
+                });
+                resolve();
             });
         },
-        []
+        onMutate: async (variables) => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({ queryKey: ["messages", variables.conversationId] });
+
+            // Snapshot previous value
+            const previousMessages = queryClient.getQueryData(["messages", variables.conversationId]);
+
+            // Create optimistic message
+            const optimisticMsg: IncomingMessage = {
+                id: `temp-${Date.now()}`,
+                conversationId: variables.conversationId,
+                senderId: currentUserId || "optimistic-id",
+                content: variables.content,
+                attachmentUrl: variables.attachmentUrl,
+                isDeleted: false,
+                createdAt: new Date().toISOString(),
+                sender: {
+                    id: currentUserId || "optimistic-id",
+                    email: "",
+                    role: "ADMIN"
+                }
+            };
+
+            // Optimistically update
+            queryClient.setQueryData(
+                ["messages", variables.conversationId],
+                (oldData: any) => {
+                    if (!oldData) return { messages: [optimisticMsg] };
+                    if (oldData.pages) {
+                        const newPages = [...oldData.pages];
+                        newPages[0] = {
+                            ...newPages[0],
+                            messages: [optimisticMsg, ...newPages[0].messages],
+                        };
+                        return { ...oldData, pages: newPages };
+                    }
+                    if (Array.isArray(oldData)) {
+                        return [optimisticMsg, ...oldData];
+                    }
+                    if (oldData.messages) {
+                        return { ...oldData, messages: [optimisticMsg, ...oldData.messages] };
+                    }
+                    return oldData;
+                }
+            );
+
+            // Invalidate conversations to snap snippet to top
+            queryClient.invalidateQueries({ queryKey: ["conversations"] });
+
+            return { previousMessages };
+        },
+        onError: (err, variables, context) => {
+            if (context?.previousMessages) {
+                queryClient.setQueryData(["messages", variables.conversationId], context.previousMessages);
+            }
+        },
+        onSettled: (data, error, variables) => {
+            queryClient.invalidateQueries({ queryKey: ["messages", variables.conversationId] });
+            queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        }
+    });
+
+    const sendMessage = useCallback(
+        (conversationId: string, content: string, attachmentUrl?: string) => {
+            sendMessageMutation({ conversationId, content, attachmentUrl });
+        },
+        [sendMessageMutation]
     );
 
     const joinConversation = useCallback((conversationId: string) => {
