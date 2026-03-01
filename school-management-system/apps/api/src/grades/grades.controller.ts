@@ -41,4 +41,51 @@ export class GradesController {
             data: await this.gradesService.getStudentGrades(studentId, academicYearId)
         };
     }
+
+    // ==========================================
+    // GRADEBOOK (ITEM GRADES)
+    // ==========================================
+
+    @Roles('ADMIN', 'TEACHER')
+    @Get('grid/:sectionId/:subjectId')
+    async getGradebookGrid(
+        @Param('sectionId') sectionId: string,
+        @Param('subjectId') subjectId: string,
+        @Query('academicYearId') academicYearId: string
+    ) {
+        return {
+            success: true,
+            data: await this.gradesService.getGradebookGrid(sectionId, subjectId, academicYearId)
+        };
+    }
+
+    @Roles('ADMIN', 'TEACHER')
+    @Post('upsert')
+    async upsertItemGrade(@Body() body: { studentId: string; gradeItemId: string; score: number; remarks?: string }) {
+        return {
+            success: true,
+            data: await this.gradesService.upsertItemGrade(body),
+            message: 'Grade item saved successfully'
+        };
+    }
+
+    @Roles('ADMIN', 'TEACHER')
+    @Post('category')
+    async addGradeCategory(@Body() body: { sectionId: string; subjectId: string; academicYearId: string; name: string; weight: number }) {
+        return {
+            success: true,
+            data: await this.gradesService.addGradeCategory(body),
+            message: 'Grade category added successfully'
+        };
+    }
+
+    @Roles('ADMIN', 'TEACHER')
+    @Post('item')
+    async addGradeItem(@Body() body: { categoryId: string; name: string; maxScore: number; date?: string }) {
+        return {
+            success: true,
+            data: await this.gradesService.addGradeItem(body),
+            message: 'Grade item added successfully'
+        };
+    }
 }

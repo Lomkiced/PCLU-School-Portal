@@ -105,6 +105,7 @@ model StudentProfile {
   academicRecords  Enrollment[]
   attendance       AttendanceRecord[]
   grades           Grade[]
+  itemGrades       ItemGrade[]
   quizSubmissions  QuizSubmission[]
   activitySubs     ActivitySubmission[]
   invoices         Invoice[]
@@ -207,6 +208,7 @@ model AcademicYear {
   sectionSubjects SectionSubject[]
   fees            FeeStructure[]
   grades          Grade[]
+  gradeCategories GradeCategory[]
   timetables      Timetable[]
   invoices        Invoice[]
   academicRecords Enrollment[]
@@ -281,6 +283,7 @@ model Section {
   activities   Activity[]
   lmsContents  LMSContent[]
   timetableSlots TimetableSlot[]
+  gradeCategories GradeCategory[]
 }
 
 enum RoomType {
@@ -341,6 +344,7 @@ model Subject {
   quizzes        Quiz[]
   activities     Activity[]
   grades         Grade[]
+  gradeCategories GradeCategory[]
   timetableSlots TimetableSlot[]
   courses        Course[]
 }
@@ -493,6 +497,63 @@ model Grade {
   generatedFeedback  String?  @db.Text // From AI
 
   @@unique([studentId, subjectId, academicYearId, quarter])
+}
+
+model GradeCategory {
+  id              String   @id @default(uuid())
+  
+  sectionId       String
+  section         Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  
+  subjectId       String
+  subject         Subject @relation(fields: [subjectId], references: [id])
+  
+  academicYearId  String
+  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id])
+  
+  name            String   // e.g., "Quizzes", "Exams"
+  weight          Float    // e.g., 20.0
+  
+  items           GradeItem[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([sectionId, subjectId, academicYearId, name])
+}
+
+model GradeItem {
+  id              String   @id @default(uuid())
+  
+  categoryId      String
+  category        GradeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  name            String   // e.g., "Quiz 1", "Midterm Exam"
+  maxScore        Int      @default(100)
+  date            DateTime? @db.Date // Optional date of the assessment
+  
+  grades          ItemGrade[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ItemGrade {
+  id              String   @id @default(uuid())
+  
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  gradeItemId     String
+  gradeItem       GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  
+  score           Float
+  remarks         String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([studentId, gradeItemId])
 }
 
 // ==========================================

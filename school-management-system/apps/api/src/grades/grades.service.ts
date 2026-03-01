@@ -120,4 +120,95 @@ export class GradesService {
             include: { subject: true }
         });
     }
+
+    // ==========================================
+    // GRADEBOOK (ITEM GRADES)
+    // ==========================================
+
+    async getGradebookGrid(sectionId: string, subjectId: string, academicYearId: string) {
+        // Fetch enrolled students
+        const enrollments = await this.prisma.subjectEnrollment.findMany({
+            where: { sectionId, subjectId, academicYearId },
+            include: {
+                student: {
+                    include: { user: true }
+                }
+            },
+            orderBy: {
+                student: { lastName: 'asc' }
+            }
+        });
+
+        // Fetch categories and items
+        const categories = await this.prisma.gradeCategory.findMany({
+            where: { sectionId, subjectId, academicYearId },
+            include: {
+                items: {
+                    orderBy: { createdAt: 'asc' }
+                }
+            },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        const studentIds = enrollments.map((e) => e.studentId);
+        const itemIds = categories.flatMap((c) => c.items.map((i) => i.id));
+
+        // Fetch item grades
+        const itemGrades = await this.prisma.itemGrade.findMany({
+            where: {
+                studentId: { in: studentIds },
+                gradeItemId: { in: itemIds }
+            }
+        });
+
+        return {
+            students: enrollments.map((e) => e.student),
+            categories,
+            itemGrades
+        };
+    }
+
+    async upsertItemGrade(data: { studentId: string; gradeItemId: string; score: number; remarks?: string }) {
+        return this.prisma.itemGrade.upsert({
+            where: {
+                studentId_gradeItemId: {
+                    studentId: data.studentId,
+                    gradeItemId: data.gradeItemId
+                }
+            },
+            update: {
+                score: data.score,
+                remarks: data.remarks
+            },
+            create: {
+                studentId: data.studentId,
+                gradeItemId: data.gradeItemId,
+                score: data.score,
+                remarks: data.remarks
+            }
+        });
+    }
+
+    async addGradeCategory(data: { sectionId: string; subjectId: string; academicYearId: string; name: string; weight: number }) {
+        return this.prisma.gradeCategory.create({
+            data: {
+                sectionId: data.sectionId,
+                subjectId: data.subjectId,
+                academicYearId: data.academicYearId,
+                name: data.name,
+                weight: data.weight
+            }
+        });
+    }
+
+    async addGradeItem(data: { categoryId: string; name: string; maxScore: number; date?: string }) {
+        return this.prisma.gradeItem.create({
+            data: {
+                categoryId: data.categoryId,
+                name: data.name,
+                maxScore: data.maxScore,
+                date: data.date ? new Date(data.date) : null
+            }
+        });
+    }
 }
