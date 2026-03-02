@@ -1,10 +1,22 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import OpenAI from 'openai';
 
 @Injectable()
 export class GradesService {
     constructor(private prisma: PrismaService) { }
+
+    private async resolveAcademicYearId(academicYearId?: string): Promise<string> {
+        if (!academicYearId || academicYearId === 'active-academic-year' || academicYearId === 'undefined' || academicYearId === 'null') {
+            const activeYear = await this.prisma.academicYear.findFirst({
+                where: { status: 'ACTIVE' },
+                orderBy: { startDate: 'desc' },
+            });
+            if (!activeYear) throw new NotFoundException('No active academic year found');
+            return activeYear.id;
+        }
+        return academicYearId;
+    }
 
     async saveGrade(data: {
         studentId: string;
@@ -15,6 +27,8 @@ export class GradesService {
         performanceTasks: number;
         quarterlyAssessment: number;
     }) {
+        const resolvedYearId = await this.resolveAcademicYearId(data.academicYearId);
+
         // DepEd formula: WW 20% + PT 60% + QA 20%
         const wwWeight = 0.20;
         const ptWeight = 0.60;
@@ -33,13 +47,12 @@ export class GradesService {
         else remarks = 'Did Not Meet Expectations';
 
         // The unique constraint is studentId_subjectId_academicYearId_quarter
-        // But since quarter is Int, and those 4 fields have @@unique, upsert will work
         return this.prisma.grade.upsert({
             where: {
                 studentId_subjectId_academicYearId_quarter: {
                     studentId: data.studentId,
                     subjectId: data.subjectId,
-                    academicYearId: data.academicYearId,
+                    academicYearId: resolvedYearId,
                     quarter: data.quarter
                 }
             },
@@ -53,7 +66,7 @@ export class GradesService {
             create: {
                 studentId: data.studentId,
                 subjectId: data.subjectId,
-                academicYearId: data.academicYearId,
+                academicYearId: resolvedYearId,
                 quarter: data.quarter,
                 writtenWorks: data.writtenWorks,
                 performanceTasks: data.performanceTasks,
@@ -65,8 +78,9 @@ export class GradesService {
     }
 
     async computeFinalGrade(studentId: string, subjectId: string, academicYearId: string) {
+        const resolvedYearId = await this.resolveAcademicYearId(academicYearId);
         const grades = await this.prisma.grade.findMany({
-            where: { studentId, subjectId, academicYearId }
+            where: { studentId, subjectId, academicYearId: resolvedYearId }
         });
 
         // Usually, average of 4 quarters
@@ -112,10 +126,15 @@ export class GradesService {
     }
 
     async getStudentGrades(studentId: string, academicYearId?: string) {
+        let resolvedYearId = undefined;
+        if (academicYearId) {
+            resolvedYearId = await this.resolveAcademicYearId(academicYearId);
+        }
+
         return this.prisma.grade.findMany({
             where: {
                 studentId,
-                ...(academicYearId ? { academicYearId } : {})
+                ...(resolvedYearId ? { academicYearId: resolvedYearId } : {})
             },
             include: { subject: true }
         });
@@ -126,9 +145,11 @@ export class GradesService {
     // ==========================================
 
     async getGradebookGrid(sectionId: string, subjectId: string, academicYearId: string) {
+        const resolvedYearId = await this.resolveAcademicYearId(academicYearId);
+
         // Fetch enrolled students
         const enrollments = await this.prisma.subjectEnrollment.findMany({
-            where: { sectionId, subjectId, academicYearId },
+            where: { sectionId, subjectId, academicYearId: resolvedYearId },
             include: {
                 student: {
                     include: { user: true }
@@ -139,9 +160,21 @@ export class GradesService {
             }
         });
 
+        let students = enrollments.map((e) => e.student);
+
+        // Fallback for mock data context: if no SubjectEnrollment records exist for this combination,
+        // we fallback to fetching the students directly assigned to the section.
+        if (students.length === 0) {
+            students = await this.prisma.studentProfile.findMany({
+                where: { sectionId },
+                include: { user: true },
+                orderBy: { lastName: 'asc' }
+            });
+        }
+
         // Fetch categories and items
         const categories = await this.prisma.gradeCategory.findMany({
-            where: { sectionId, subjectId, academicYearId },
+            where: { sectionId, subjectId, academicYearId: resolvedYearId },
             include: {
                 items: {
                     orderBy: { createdAt: 'asc' }
@@ -150,7 +183,7 @@ export class GradesService {
             orderBy: { createdAt: 'asc' }
         });
 
-        const studentIds = enrollments.map((e) => e.studentId);
+        const studentIds = students.map((s) => s.id);
         const itemIds = categories.flatMap((c) => c.items.map((i) => i.id));
 
         // Fetch item grades
@@ -162,7 +195,7 @@ export class GradesService {
         });
 
         return {
-            students: enrollments.map((e) => e.student),
+            students,
             categories,
             itemGrades
         };
@@ -190,15 +223,26 @@ export class GradesService {
     }
 
     async addGradeCategory(data: { sectionId: string; subjectId: string; academicYearId: string; name: string; weight: number }) {
-        return this.prisma.gradeCategory.create({
-            data: {
-                sectionId: data.sectionId,
-                subjectId: data.subjectId,
-                academicYearId: data.academicYearId,
-                name: data.name,
-                weight: data.weight
+        console.log("=== addGradeCategory PAYLOAD ===", data);
+        const resolvedYearId = await this.resolveAcademicYearId(data.academicYearId);
+        console.log("=== resolvedYearId ===", resolvedYearId);
+
+        try {
+            return await this.prisma.gradeCategory.create({
+                data: {
+                    sectionId: data.sectionId,
+                    subjectId: data.subjectId,
+                    academicYearId: resolvedYearId,
+                    name: data.name,
+                    weight: data.weight
+                }
+            });
+        } catch (error: any) {
+            if (error.code === 'P2002') {
+                throw new ConflictException(`Category '${data.name}' already exists for this subject section.`);
             }
-        });
+            throw error;
+        }
     }
 
     async addGradeItem(data: { categoryId: string; name: string; maxScore: number; date?: string }) {

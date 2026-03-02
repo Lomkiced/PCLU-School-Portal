@@ -171,6 +171,7 @@ export class TeachersService {
             return {
                 id: ss.section.id,
                 subjectId: ss.subject.id,
+                academicYearId: ss.academicYearId,
                 name: ss.section.name,
                 gradeLevel: ss.section.gradeLevel.name,
                 subjectTaught: `${ss.subject.code} - ${ss.subject.name}`,

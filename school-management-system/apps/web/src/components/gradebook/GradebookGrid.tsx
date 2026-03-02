@@ -138,6 +138,8 @@ export default function GradebookGrid({ data, sectionId, subjectId }: GradebookG
                             initialValue={info.getValue() as number | null}
                             studentId={info.row.original.studentId}
                             gradeItemId={item.id}
+                            sectionId={sectionId}
+                            subjectId={subjectId}
                         />
                     ),
                     size: 100,
@@ -153,7 +155,7 @@ export default function GradebookGrid({ data, sectionId, subjectId }: GradebookG
                         </div>
                     ),
                     columns: itemColumns,
-                })
+                }) as any
             );
         });
 

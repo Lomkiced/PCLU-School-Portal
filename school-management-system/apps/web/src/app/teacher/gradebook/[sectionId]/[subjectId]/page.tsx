@@ -1,67 +1,47 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { use } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Plus, ArrowLeft } from 'lucide-react';
 import GradebookGrid from '@/components/gradebook/GradebookGrid';
+import { AddCategoryModal } from '@/components/gradebook/AddCategoryModal';
+import { AddItemModal } from '@/components/gradebook/AddItemModal';
 import { api } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
 
 export default function GradebookSpreadsheetPage({
     params: paramsPromise,
+    searchParams: searchParamsPromise,
 }: {
     params: Promise<{ sectionId: string; subjectId: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     const params = use(paramsPromise);
+    const searchParams = use(searchParamsPromise);
     const router = useRouter();
-    const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
 
-    const academicYearId = 'active-academic-year'; // In real app, fetch from context
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    const [isItemModalOpen, setIsItemModalOpen] = useState(false);
 
-    useEffect(() => {
-        // Fetch Gradebook Data
-        const fetchGradebook = async () => {
-            try {
-                const res = await api.get(`/grades/grid/${params.sectionId}/${params.subjectId}`, {
-                    params: { academicYearId }
-                });
-                if (res.data?.success) {
-                    setData(res.data.data);
-                } else {
-                    console.error('Failed to fetch gradebook', res.data);
-                    // Mock data for development if API fails or isn't hooked up to proxy
-                    setData({
-                        students: [
-                            { id: 'st-1', firstName: 'John', lastName: 'Doe' },
-                            { id: 'st-2', firstName: 'Jane', lastName: 'Smith' },
-                        ],
-                        categories: [
-                            {
-                                id: 'cat-1', name: 'Quizzes', weight: 40, items: [
-                                    { id: 'item-1', name: 'Quiz 1', maxScore: 100 },
-                                    { id: 'item-2', name: 'Quiz 2', maxScore: 100 }
-                                ]
-                            },
-                        ],
-                        itemGrades: [
-                            { studentId: 'st-1', gradeItemId: 'item-1', score: 85 },
-                            { studentId: 'st-2', gradeItemId: 'item-1', score: 92 },
-                        ]
-                    });
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
+    const academicYearId = (searchParams.academicYearId as string) || 'active-academic-year';
+
+    const { data, isLoading, isError } = useQuery({
+        queryKey: ['gradebookGrid', params.sectionId, params.subjectId, academicYearId],
+        queryFn: async () => {
+            const res = await api.get(`/grades/grid/${params.sectionId}/${params.subjectId}`, {
+                params: { academicYearId }
+            });
+            if (!res.data?.success) {
+                throw new Error('Failed to fetch gradebook');
             }
-        };
+            return res.data.data;
+        }
+    });
 
-        fetchGradebook();
-    }, [params.sectionId, params.subjectId]);
-
-    if (loading) return <div className="p-6">Loading gradebook...</div>;
-    if (!data) return <div className="p-6">Failed to load gradebook.</div>;
+    if (isLoading) return <div className="p-6">Loading gradebook...</div>;
+    if (isError || !data) return <div className="p-6 text-red-500">Failed to load gradebook.</div>;
 
     return (
         <div className="container mx-auto p-4 md:p-6 space-y-6">
@@ -78,11 +58,11 @@ export default function GradebookSpreadsheetPage({
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="secondary">
+                    <Button variant="secondary" onClick={() => setIsCategoryModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add Category
                     </Button>
-                    <Button>
+                    <Button onClick={() => setIsItemModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add Item
                     </Button>
@@ -92,6 +72,23 @@ export default function GradebookSpreadsheetPage({
             <div className="bg-white dark:bg-zinc-950 border rounded-lg shadow-sm w-full overflow-hidden">
                 <GradebookGrid data={data} sectionId={params.sectionId} subjectId={params.subjectId} />
             </div>
+
+            <AddCategoryModal
+                open={isCategoryModalOpen}
+                onOpenChange={setIsCategoryModalOpen}
+                sectionId={params.sectionId}
+                subjectId={params.subjectId}
+                academicYearId={academicYearId}
+            />
+
+            <AddItemModal
+                open={isItemModalOpen}
+                onOpenChange={setIsItemModalOpen}
+                sectionId={params.sectionId}
+                subjectId={params.subjectId}
+                academicYearId={academicYearId}
+                categories={data?.categories || []}
+            />
         </div>
     );
 }
