@@ -5,11 +5,12 @@ import { PrismaService } from '../prisma/prisma.service';
 export class LmsService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async getCourseBySubject(subjectId: string) {
+    async getCourseBySubject(subjectId: string, user: any) {
         // Find the course for this subject
         let course = await this.prisma.course.findFirst({
             where: { subjectId },
             include: {
+                subject: true,
                 modules: {
                     orderBy: { orderIndex: 'asc' },
                     include: {
@@ -22,9 +23,53 @@ export class LmsService {
         });
 
         if (!course) {
-            // If no course exists but the subject does, return 404 or an empty structure
-            // For now, return 404
-            throw new NotFoundException(`Course not found for subject ${subjectId}`);
+            // If the user is a teacher, let's auto-create the course for them
+            if (user.role === 'TEACHER') {
+                const teacherProfile = await this.prisma.teacherProfile.findUnique({
+                    where: { userId: user.id }
+                });
+
+                // Find the first section this teacher handles for this subject
+                // to get the gradeLevelId required to create the course
+                const sectionSubject = await this.prisma.sectionSubject.findFirst({
+                    where: {
+                        teacherId: teacherProfile?.id,
+                        subjectId: subjectId
+                    },
+                    include: { section: true }
+                });
+
+                if (teacherProfile && sectionSubject) {
+                    const newCourse = await this.prisma.course.create({
+                        data: {
+                            subjectId,
+                            teacherId: teacherProfile.id,
+                            gradeLevelId: sectionSubject.section.gradeLevelId
+                        }
+                    });
+
+                    // Fetch the newly created course with the required relations mapping
+                    course = await this.prisma.course.findUnique({
+                        where: { id: newCourse.id },
+                        include: {
+                            subject: true,
+                            modules: {
+                                orderBy: { orderIndex: 'asc' },
+                                include: {
+                                    items: {
+                                        orderBy: { orderIndex: 'asc' },
+                                    },
+                                },
+                            },
+                        },
+                    });
+                } else {
+                    throw new NotFoundException(`Course not found for subject ${subjectId} and cannot be auto-created.`);
+                }
+            } else {
+                // If it's a student, return 404 because teachers should create courses first
+                throw new NotFoundException(`Course not found for subject ${subjectId}`);
+            }
         }
 
         return course;
@@ -44,6 +89,27 @@ export class LmsService {
                 courseId: data.courseId,
                 title: data.title,
                 description: data.description,
+                orderIndex: nextOrder,
+            },
+        });
+    }
+
+    async createItem(moduleId: string, data: { title: string; type: any; body?: string; attachments?: any }) {
+        // Determine next orderIndex
+        const aggregations = await this.prisma.lMSItem.aggregate({
+            where: { moduleId },
+            _max: { orderIndex: true },
+        });
+
+        const nextOrder = (aggregations._max.orderIndex ?? -1) + 1;
+
+        return this.prisma.lMSItem.create({
+            data: {
+                moduleId,
+                title: data.title,
+                type: data.type,
+                body: data.body,
+                attachments: data.attachments,
                 orderIndex: nextOrder,
             },
         });

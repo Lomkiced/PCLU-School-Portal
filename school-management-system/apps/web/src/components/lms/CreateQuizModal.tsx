@@ -8,13 +8,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2 } from 'lucide-react';
 
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
+
 interface CreateQuizModalProps {
     isOpen: boolean;
     onClose: () => void;
     moduleId?: string;
+    subjectId: string;
 }
 
-export function CreateQuizModal({ isOpen, onClose, moduleId }: CreateQuizModalProps) {
+export function CreateQuizModal({ isOpen, onClose, moduleId, subjectId }: CreateQuizModalProps) {
     const { register, control, handleSubmit, reset } = useForm({
         defaultValues: {
             title: '',
@@ -27,16 +32,37 @@ export function CreateQuizModal({ isOpen, onClose, moduleId }: CreateQuizModalPr
         name: "questions"
     });
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const queryClient = useQueryClient();
 
-    const onSubmit = async (data: any) => {
-        setIsSubmitting(true);
-        // Simulate API Call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        console.log('Submitted Quiz:', { ...data, moduleId });
-        setIsSubmitting(false);
-        reset();
-        onClose();
+    const createQuizMutation = useMutation({
+        mutationFn: async (data: any) => {
+            // Transform quiz questions to store in attachments
+            const totalPoints = data.questions.reduce((sum: number, q: any) => sum + Number(q.points), 0);
+
+            const res = await api.post(`/lms/modules/${moduleId}/items`, {
+                title: data.title,
+                type: 'QUIZ',
+                attachments: {
+                    questions: data.questions,
+                    totalPoints
+                }
+            });
+            return res.data;
+        },
+        onSuccess: () => {
+            toast.success('Quiz created successfully!');
+            queryClient.invalidateQueries({ queryKey: ['course', subjectId] });
+            reset();
+            onClose();
+        },
+        onError: () => {
+            toast.error('Failed to create quiz.');
+        }
+    });
+
+    const onSubmit = (data: any) => {
+        if (!moduleId) return;
+        createQuizMutation.mutate(data);
     };
 
     return (
@@ -120,9 +146,9 @@ export function CreateQuizModal({ isOpen, onClose, moduleId }: CreateQuizModalPr
                 </div>
 
                 <DialogFooter className="pt-4 border-t mt-auto">
-                    <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-                    <Button type="submit" form="quizForm" disabled={isSubmitting}>
-                        {isSubmitting ? 'Saving...' : 'Save Quiz'}
+                    <Button type="button" variant="ghost" onClick={onClose} disabled={createQuizMutation.isPending}>Cancel</Button>
+                    <Button type="submit" form="quizForm" disabled={createQuizMutation.isPending}>
+                        {createQuizMutation.isPending ? 'Saving...' : 'Save Quiz'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
