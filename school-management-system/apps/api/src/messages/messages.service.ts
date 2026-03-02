@@ -350,4 +350,105 @@ export class MessagesService {
             data: { lastReadAt: new Date() },
         });
     }
+
+    /**
+     * Automatically sync a group chat for a specific SectionSubject.
+     * Finds or creates a GROUP conversation and syncs participants (Teacher + Students).
+     */
+    async syncSubjectGroupChat(sectionSubjectId: string) {
+        this.logger.log(`Syncing group chat for SectionSubject: ${sectionSubjectId}`);
+
+        const sectionSubject = await this.prisma.sectionSubject.findUnique({
+            where: { id: sectionSubjectId },
+            include: {
+                teacher: true,
+                subject: true,
+                section: true
+            }
+        });
+
+        if (!sectionSubject) {
+            throw new NotFoundException('SectionSubject not found');
+        }
+
+        // 1. Find or create the corresponding Conversation
+        let conversation = await this.prisma.conversation.findFirst({
+            where: {
+                type: 'GROUP',
+                contextType: 'SUBJECT_GROUP',
+                contextId: sectionSubjectId
+            }
+        });
+
+        if (!conversation) {
+            const title = `${sectionSubject.subject.code} - ${sectionSubject.section.name}`;
+            conversation = await this.prisma.conversation.create({
+                data: {
+                    title,
+                    type: 'GROUP',
+                    contextType: 'SUBJECT_GROUP',
+                    contextId: sectionSubjectId
+                }
+            });
+        }
+
+        // 2. Fetch all valid enrollments (exclude DROPPED)
+        const enrollments = await this.prisma.subjectEnrollment.findMany({
+            where: {
+                subjectId: sectionSubject.subjectId,
+                sectionId: sectionSubject.sectionId,
+                academicYearId: sectionSubject.academicYearId,
+                status: { not: 'DROPPED' }
+            },
+            include: { student: true }
+        });
+
+        // 3. Determine expected user IDs
+        const expectedUserIds = new Set<string>();
+
+        if (sectionSubject.teacher?.userId) {
+            expectedUserIds.add(sectionSubject.teacher.userId);
+        }
+
+        for (const enr of enrollments) {
+            if (enr.student?.userId) {
+                expectedUserIds.add(enr.student.userId);
+            }
+        }
+
+        // 4. Fetch current participants
+        const currentParticipants = await this.prisma.conversationParticipant.findMany({
+            where: { conversationId: conversation.id }
+        });
+
+        const currentUserIds = new Set(currentParticipants.map(p => p.userId));
+
+        // 5. Calculate diffs
+        const toAdd = Array.from(expectedUserIds).filter(id => !currentUserIds.has(id));
+        const toRemove = Array.from(currentUserIds).filter(id => !expectedUserIds.has(id));
+
+        // 6. Apply diffs
+        if (toAdd.length > 0) {
+            await this.prisma.conversationParticipant.createMany({
+                data: toAdd.map(userId => ({
+                    conversationId: conversation!.id,
+                    userId: userId,
+                    role: sectionSubject.teacher?.userId === userId ? 'ADMIN' : 'MEMBER'
+                }))
+            });
+            this.logger.log(`Added ${toAdd.length} participants to group chat ${conversation.id}`);
+        }
+
+        if (toRemove.length > 0) {
+            await this.prisma.conversationParticipant.deleteMany({
+                where: {
+                    conversationId: conversation.id,
+                    userId: { in: toRemove }
+                }
+            });
+            this.logger.log(`Removed ${toRemove.length} participants from group chat ${conversation.id}`);
+        }
+
+        return conversation;
+    }
 }

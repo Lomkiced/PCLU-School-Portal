@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentStatus } from '@sms/database';
 
@@ -49,6 +49,78 @@ export class EnrollmentsService {
             },
             include: { subject: true, section: true }
         });
+    }
+
+    async getMyEnrollments(userId: string, academicYearId?: string) {
+        const student = await this.prisma.studentProfile.findUnique({
+            where: { userId }
+        });
+
+        if (!student) {
+            throw new NotFoundException('Student profile not found');
+        }
+
+        // 1. Fetch Explicit Enrollments (e.g. Back subjects, electives)
+        const explicitEnrollments = await this.prisma.subjectEnrollment.findMany({
+            where: {
+                studentId: student.id,
+                ...(academicYearId ? { academicYearId } : {})
+            },
+            include: {
+                subject: {
+                    include: { department: true }
+                },
+                section: true,
+                academicYear: true
+            }
+        });
+
+        // 2. Fetch Section Subjects (if student is in a section)
+        let sectionSubjects: any[] = [];
+        if (student.sectionId) {
+            const rawSectionSubjects = await this.prisma.sectionSubject.findMany({
+                where: {
+                    sectionId: student.sectionId,
+                    ...(academicYearId ? { academicYearId } : {})
+                },
+                include: {
+                    subject: {
+                        include: { department: true }
+                    },
+                    section: true,
+                    academicYear: true
+                }
+            });
+
+            // Map them to match the explicitEnrollments shape
+            sectionSubjects = rawSectionSubjects.map(ss => ({
+                id: ss.id, // using the SectionSubject ID as a dummy ID
+                studentId: student.id,
+                subjectId: ss.subjectId,
+                sectionId: ss.sectionId,
+                academicYearId: ss.academicYearId,
+                status: 'IN_PROGRESS', // Default pseudo-status for section-assigned subjects
+                finalGrade: null,
+                remarks: null,
+                // Included relations
+                subject: ss.subject,
+                section: ss.section,
+                academicYear: ss.academicYear
+            }));
+        }
+
+        // 3. Merge and Deduplicate (Explicit enrollments take precedence over section subjects)
+        const merged = [...explicitEnrollments];
+        const mergedSubjectIds = new Set(explicitEnrollments.map(e => e.subjectId));
+
+        for (const ss of sectionSubjects) {
+            if (!mergedSubjectIds.has(ss.subjectId)) {
+                merged.push(ss);
+                mergedSubjectIds.add(ss.subjectId);
+            }
+        }
+
+        return merged;
     }
 
     async promoteBatch(data: { studentIds: string[]; sourceAcademicYearId: string; targetAcademicYearId: string; targetGradeLevelId: string; }) {

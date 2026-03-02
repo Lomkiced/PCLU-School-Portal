@@ -1,0 +1,16 @@
+src/app/student/schedule/page.tsx(246,72): error TS2322: Type '"secondary"' is not assignable to type '"default" | "destructive" | "outline" | "success" | "warning" | "info" | undefined'.
+src/components/gradebook/GradebookGrid.tsx(148,17): error TS2345: Argument of type 'GroupColumnDef<any, unknown>' is not assignable to parameter of type 'AccessorKeyColumnDef<any, any>'.
+  Type 'GroupColumnDefBase<any, unknown> & StringHeaderIdentifier' is not assignable to type 'AccessorKeyColumnDef<any, any>'.
+    Type 'GroupColumnDefBase<any, unknown> & StringHeaderIdentifier' is not assignable to type 'AccessorKeyColumnDefBase<any, any> & Partial<IdIdentifier<any, any>>'.
+      Property 'accessorKey' is missing in type 'GroupColumnDefBase<any, unknown> & StringHeaderIdentifier' but required in type 'AccessorKeyColumnDefBase<any, any>'.
+src/components/ui/skeleton.tsx(5,6): error TS2322: Type '{ ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 277 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'.
+  Type '{ ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 277 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLDivElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'React.Ref<HTMLDivElement> | undefined' is not assignable to type 'import("D:/Capstone Projects/PCLU School Portal/school-management-system/node_modules/.pnpm/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLDivElement> | undefined'.
+        Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+          Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.

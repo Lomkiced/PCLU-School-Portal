@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { EnrollmentsService } from './enrollments.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -17,6 +17,18 @@ export class EnrollmentsController {
             success: true,
             data: await this.enrollmentsService.enrollStudent(body),
             message: 'Student enrolled in subject successfully'
+        };
+    }
+
+    @Roles('STUDENT')
+    @Get('my-enrollments')
+    async getMyEnrollments(
+        @Request() req: any,
+        @Query('academicYearId') academicYearId?: string
+    ) {
+        return {
+            success: true,
+            data: await this.enrollmentsService.getMyEnrollments(req.user.id, academicYearId)
         };
     }
 

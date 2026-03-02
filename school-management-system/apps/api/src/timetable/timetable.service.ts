@@ -75,6 +75,57 @@ export class TimetableService {
         });
     }
 
+    async getMyTimetable(userId: string) {
+        const student = await this.prisma.studentProfile.findUnique({
+            where: { userId },
+            include: {
+                enrollments: {
+                    include: { subject: true, section: true }
+                }
+            }
+        });
+
+        if (!student) {
+            throw new NotFoundException('Student profile not found');
+        }
+
+        const sectionIds = new Set<string>();
+        if (student.sectionId) sectionIds.add(student.sectionId);
+
+        student.enrollments.forEach(e => {
+            if (e.sectionId) sectionIds.add(e.sectionId);
+        });
+
+        if (sectionIds.size === 0) {
+            return [];
+        }
+
+        const slots = await this.prisma.timetableSlot.findMany({
+            where: {
+                sectionId: { in: Array.from(sectionIds) }
+            },
+            include: {
+                subject: true,
+                room: true,
+                teacher: true,
+                section: true
+            }
+        });
+
+        const validSlots = slots.filter(slot => {
+            // Include slot if it belongs to their primary section
+            if (student.sectionId && slot.sectionId === student.sectionId) return true;
+
+            // Or if it matches an exact subject enrollment (for irregular/cross-enrolled students)
+            const matchedEnrollment = student.enrollments.find(
+                e => e.sectionId === slot.sectionId && e.subjectId === slot.subjectId
+            );
+            return !!matchedEnrollment;
+        });
+
+        return validSlots;
+    }
+
     async updateTimeslot(id: string, data: { dayOfWeek: DayOfWeek; startTime: string; endTime: string; roomId: string; teacherId?: string }) {
         const slot = await this.prisma.timetableSlot.findUnique({ where: { id } });
         if (!slot) throw new NotFoundException('Timeslot not found');

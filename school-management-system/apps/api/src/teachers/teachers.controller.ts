@@ -3,11 +3,21 @@ import { TeachersService } from './teachers.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('teachers')
 export class TeachersController {
     constructor(private readonly teachersService: TeachersService) { }
+
+    @Roles('TEACHER')
+    @Get('me/classes')
+    async getMyClasses(@CurrentUser() user: any) {
+        return {
+            success: true,
+            data: await this.teachersService.getMyClasses(user.id)
+        };
+    }
 
     @Roles('ADMIN')
     @Post()

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Delete, Request } from '@nestjs/common';
 import { TimetableService } from './timetable.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -53,6 +53,15 @@ export class TimetableController {
         return {
             success: true,
             data: await this.timetableService.getAllTimetables()
+        };
+    }
+
+    @Roles('STUDENT')
+    @Get('my-schedule')
+    async getMyTimetable(@Request() req: any) {
+        return {
+            success: true,
+            data: await this.timetableService.getMyTimetable(req.user.id)
         };
     }
 

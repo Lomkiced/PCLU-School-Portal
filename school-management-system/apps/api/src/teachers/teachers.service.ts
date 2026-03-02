@@ -128,6 +128,58 @@ export class TeachersService {
         return result;
     }
 
+    async getMyClasses(userId: string) {
+        const teacherProfile = await this.prisma.teacherProfile.findUnique({
+            where: { userId }
+        });
+
+        if (!teacherProfile) {
+            throw new NotFoundException('Teacher profile not found');
+        }
+
+        const sectionSubjects = await this.prisma.sectionSubject.findMany({
+            where: {
+                teacherId: teacherProfile.id,
+            },
+            include: {
+                section: {
+                    include: {
+                        gradeLevel: true,
+                        room: true,
+                        _count: {
+                            select: { students: true }
+                        },
+                        timetableSlots: {
+                            where: { teacherId: teacherProfile.id },
+                            include: { room: true }
+                        }
+                    }
+                },
+                subject: true,
+            }
+        });
+
+        return sectionSubjects.map(ss => {
+            const slots = ss.section.timetableSlots.filter(t => t.subjectId === ss.subjectId);
+            const schedule = slots.length > 0
+                ? slots.map(s => `${s.dayOfWeek.substring(0, 3)} ${s.startTime}`).join(', ')
+                : 'TBA';
+            const roomNumber = slots.length > 0 && slots[0].room
+                ? slots[0].room.name
+                : ss.section.room?.name || 'TBA';
+
+            return {
+                id: ss.section.id,
+                name: ss.section.name,
+                gradeLevel: ss.section.gradeLevel.name,
+                subjectTaught: `${ss.subject.code} - ${ss.subject.name}`,
+                roomNumber: roomNumber,
+                studentsCount: ss.section._count.students,
+                schedule: schedule
+            };
+        });
+    }
+
     async findAll(params: { skip?: number; take?: number; search?: string; departmentId?: string }) {
         const { skip, take, search, departmentId } = params;
 

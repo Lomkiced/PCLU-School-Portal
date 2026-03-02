@@ -3,6 +3,7 @@ import { MessagesService } from './messages.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { DirectMessageGuard } from './guards/direct-message.guard';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('messages')
@@ -20,6 +21,7 @@ export class MessagesController {
 
     /** POST /messages/conversations/direct — get or create a DM conversation */
     // NOTE: Must be defined BEFORE the :id route to avoid NestJS treating "direct" as an :id param
+    @UseGuards(DirectMessageGuard)
     @Post('conversations/direct')
     async getOrCreateDirect(
         @Body() body: { recipientId: string },

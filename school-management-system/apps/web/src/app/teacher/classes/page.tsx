@@ -4,47 +4,25 @@ import { useQuery } from "@tanstack/react-query";
 import { Users, School, BookOpen, Clock, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthStore } from "@/stores/auth-store";
 
-// Mock API endpoint for Teacher's assigned sections
-const fetchMySections = async () => {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    return [
-        {
-            id: "sec-001",
-            name: "BSIT-2A",
-            gradeLevel: "2nd Year",
-            subjectTaught: "CS101 - Intro to Programming",
-            roomNumber: "Lab 1",
-            studentsCount: 45,
-            schedule: "Mon/Wed 8:00 AM"
+const fetchMySections = async (token: string) => {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/teachers/me/classes`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
         },
-        {
-            id: "sec-002",
-            name: "BSIT-3A",
-            gradeLevel: "3rd Year",
-            subjectTaught: "IT202 - Data Structures",
-            roomNumber: "Lab 2",
-            studentsCount: 42,
-            schedule: "Tue/Thu 10:00 AM"
-        },
-        {
-            id: "sec-003",
-            name: "BSIT-2B",
-            gradeLevel: "2nd Year",
-            subjectTaught: "CS101 - Intro to Programming",
-            roomNumber: "Lab 1",
-            studentsCount: 38,
-            schedule: "Mon/Wed 1:00 PM"
-        },
-    ];
+    });
+    if (!res.ok) throw new Error("Failed to fetch my classes");
+    const json = await res.json();
+    return json.data;
 };
 
 export default function MyClassesPage() {
+    const { accessToken } = useAuthStore();
     const { data: sections, isLoading, isError } = useQuery({
-        queryKey: ["teacher-sections"],
-        queryFn: fetchMySections,
+        queryKey: ["teacher-sections", accessToken],
+        queryFn: () => fetchMySections(accessToken!),
+        enabled: !!accessToken,
     });
 
     return (

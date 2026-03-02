@@ -13,25 +13,25 @@ datasource db {
 // ==========================================
 
 model Enrollment {
-  id              String   @id @default(uuid())
-  
-  studentId       String
-  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  academicYearId  String
-  academicYear    AcademicYear   @relation(fields: [academicYearId], references: [id])
-  
-  gradeLevelId    String
-  gradeLevel      GradeLevel     @relation(fields: [gradeLevelId], references: [id])
-  
-  sectionId       String?
-  section         Section?       @relation(fields: [sectionId], references: [id])
-  
-  status          EnrollmentStatus @default(ACTIVE)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id String @id @default(uuid())
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  gradeLevelId String
+  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
+
+  sectionId String?
+  section   Section? @relation(fields: [sectionId], references: [id])
+
+  status EnrollmentStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([studentId, academicYearId])
 }
 
@@ -64,50 +64,50 @@ model User {
 
   // Generic Relations
   conversationParticipants ConversationParticipant[]
-  messages         Message[]
-  notifications    Notification[]
-  credential       Credential?
-  announcements    Announcement[]    @relation("AnnouncementAuthor")
-  announcementReceipts AnnouncementReadReceipt[]
+  messages                 Message[]
+  notifications            Notification[]
+  credential               Credential?
+  announcements            Announcement[]            @relation("AnnouncementAuthor")
+  announcementReceipts     AnnouncementReadReceipt[]
 }
 
 model StudentProfile {
-  id               String   @id @default(uuid())
-  userId           String   @unique
-  studentId        String   @unique // year-grade-sequence format
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  firstName        String
-  lastName         String
-  middleName       String?
-  birthdate        DateTime
-  gender           Gender
-  address          String
-  
+  id        String @id @default(uuid())
+  userId    String @unique
+  studentId String @unique // year-grade-sequence format
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName  String
+  lastName   String
+  middleName String?
+  birthdate  DateTime
+  gender     Gender
+  address    String
+
   guardianName     String
   guardianRelation String
   guardianContact  String
   guardianEmail    String?
-  
+
   enrollmentStatus EnrollmentStatus @default(ACTIVE)
   qrCodeUrl        String?
-  
-  gradeLevelId     String?
-  gradeLevel       GradeLevel? @relation(fields: [gradeLevelId], references: [id])
-  
-  sectionId        String?
-  section          Section?    @relation(fields: [sectionId], references: [id])
 
-  parents          ParentProfile[] @relation("StudentParents")
-  
-  enrollments      SubjectEnrollment[]
-  academicRecords  Enrollment[]
-  attendance       AttendanceRecord[]
-  grades           Grade[]
-  itemGrades       ItemGrade[]
-  quizSubmissions  QuizSubmission[]
-  activitySubs     ActivitySubmission[]
-  invoices         Invoice[]
+  gradeLevelId String?
+  gradeLevel   GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+
+  sectionId String?
+  section   Section? @relation(fields: [sectionId], references: [id])
+
+  parents ParentProfile[] @relation("StudentParents")
+
+  enrollments        SubjectEnrollment[]
+  academicRecords    Enrollment[]
+  attendance         AttendanceRecord[]
+  grades             Grade[]
+  itemGrades         ItemGrade[]
+  quizSubmissions    QuizSubmission[]
+  activitySubs       ActivitySubmission[]
+  invoices           Invoice[]
   studentSubmissions StudentSubmission[]
 }
 
@@ -126,10 +126,10 @@ enum EnrollmentStatus {
 }
 
 model TeacherProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  employeeId    String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String @id @default(uuid())
+  userId     String @unique
+  employeeId String @unique
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   firstName     String
   lastName      String
@@ -140,47 +140,47 @@ model TeacherProfile {
   contactNumber String
   position      String // e.g. "Senior Teacher II"
 
-  departmentId  String?
-  department    Department? @relation("DepartmentTeachers", fields: [departmentId], references: [id])
-  headOfDept    Department? @relation("DepartmentHead")
+  departmentId String?
+  department   Department? @relation("DepartmentTeachers", fields: [departmentId], references: [id])
+  headOfDept   Department? @relation("DepartmentHead")
 
   advisoryClasses Section[] @relation("Adviser")
-  
+
   sectionSubjects SectionSubject[]
-  quizzes       Quiz[]
-  activities    Activity[]
-  timetableSlots TimetableSlot[]
-  courses       Course[]
+  quizzes         Quiz[]
+  activities      Activity[]
+  timetableSlots  TimetableSlot[]
+  courses         Course[]
 }
 
 model ParentProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   firstName     String
   lastName      String
   contactNumber String
-  
-  students      StudentProfile[] @relation("StudentParents")
+
+  students StudentProfile[] @relation("StudentParents")
 }
 
 model AdminProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  firstName     String
-  lastName      String
-  position      String
+  id        String @id @default(uuid())
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  position  String
 }
 
 model Credential {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  username       String   @unique
-  plainPassword  String   // Temporary plain password for printing
-  printedAt      DateTime?
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username      String    @unique
+  plainPassword String // Temporary plain password for printing
+  printedAt     DateTime?
 }
 
 // ==========================================
@@ -194,15 +194,15 @@ enum AcademicYearStatus {
 }
 
 model AcademicYear {
-  id              String   @id @default(uuid())
-  name            String   // e.g. "2024-2025"
-  startDate       DateTime
-  endDate         DateTime
-  status          AcademicYearStatus @default(UPCOMING)
-  isDefault       Boolean  @default(false)
-  
-  gradingPeriods  GradingPeriod[]
-  
+  id        String             @id @default(uuid())
+  name      String // e.g. "2024-2025"
+  startDate DateTime
+  endDate   DateTime
+  status    AcademicYearStatus @default(UPCOMING)
+  isDefault Boolean            @default(false)
+
+  gradingPeriods GradingPeriod[]
+
   enrollments     SubjectEnrollment[]
   sectionSubjects SectionSubject[]
   fees            FeeStructure[]
@@ -214,28 +214,28 @@ model AcademicYear {
 }
 
 model GradingPeriod {
-  id              String   @id @default(uuid())
-  name            String   // e.g., "1st Quarter"
-  weight          Float    // e.g., 25.0 for 25%
-  startDate       DateTime
-  endDate         DateTime
-  dueDate         DateTime
+  id        String   @id @default(uuid())
+  name      String // e.g., "1st Quarter"
+  weight    Float // e.g., 25.0 for 25%
+  startDate DateTime
+  endDate   DateTime
+  dueDate   DateTime
 
-  academicYearId  String
-  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
 
   @@unique([name, academicYearId])
 }
 
 model Department {
-  id            String   @id @default(uuid())
-  name          String   @unique
-  
-  headTeacherId String?  @unique
+  id   String @id @default(uuid())
+  name String @unique
+
+  headTeacherId String?         @unique
   headTeacher   TeacherProfile? @relation("DepartmentHead", fields: [headTeacherId], references: [id])
-  
-  teachers      TeacherProfile[] @relation("DepartmentTeachers")
-  subjects      Subject[]
+
+  teachers TeacherProfile[] @relation("DepartmentTeachers")
+  subjects Subject[]
 }
 
 enum SchoolLevel {
@@ -246,41 +246,41 @@ enum SchoolLevel {
 }
 
 model GradeLevel {
-  id          String   @id @default(uuid())
-  name        String   // K1, Grade 1, Grade 12 - STEM
+  id          String      @id @default(uuid())
+  name        String // K1, Grade 1, Grade 12 - STEM
   schoolLevel SchoolLevel
-  
-  sections    Section[]
-  students    StudentProfile[]
-  subjects    Subject[]
-  feeStructures FeeStructure[]
+
+  sections        Section[]
+  students        StudentProfile[]
+  subjects        Subject[]
+  feeStructures   FeeStructure[]
   academicRecords Enrollment[]
-  courses     Course[]
+  courses         Course[]
 }
 
 model Section {
-  id           String   @id @default(uuid())
-  name         String
-  capacity     Int
-  
+  id       String @id @default(uuid())
+  name     String
+  capacity Int
+
   gradeLevelId String
   gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
-  
-  adviserId    String?
-  adviser      TeacherProfile? @relation("Adviser", fields: [adviserId], references: [id])
-  
-  roomId       String?
-  room         Room? @relation(fields: [roomId], references: [id])
 
-  students     StudentProfile[]
-  enrollments  SubjectEnrollment[]
+  adviserId String?
+  adviser   TeacherProfile? @relation("Adviser", fields: [adviserId], references: [id])
+
+  roomId String?
+  room   Room?   @relation(fields: [roomId], references: [id])
+
+  students        StudentProfile[]
+  enrollments     SubjectEnrollment[]
   academicRecords Enrollment[]
   sectionSubjects SectionSubject[]
-  attendance   AttendanceRecord[]
-  quizzes      Quiz[]
-  activities   Activity[]
-  lmsContents  LMSContent[]
-  timetableSlots TimetableSlot[]
+  attendance      AttendanceRecord[]
+  quizzes         Quiz[]
+  activities      Activity[]
+  lmsContents     LMSContent[]
+  timetableSlots  TimetableSlot[]
   gradeCategories GradeCategory[]
 }
 
@@ -292,14 +292,14 @@ enum RoomType {
 }
 
 model Room {
-  id        String   @id @default(uuid())
-  name      String
-  capacity  Int
-  type      RoomType
-  building  String
-  floor     String
-  
-  sections  Section[]
+  id       String   @id @default(uuid())
+  name     String
+  capacity Int
+  type     RoomType
+  building String
+  floor    String
+
+  sections       Section[]
   timetableSlots TimetableSlot[]
 }
 
@@ -312,39 +312,39 @@ enum SubjectType {
 }
 
 model Subject {
-  id             String   @id @default(uuid())
-  name           String
-  code           String   @unique
-  units          Float
-  description    String?
-  subjectType    SubjectType
-  credits        Float    @default(3)
-  lectureHours   Int      @default(3)
-  labHours       Int      @default(0)
-  
-  gradeLevelId   String
-  gradeLevel     GradeLevel @relation(fields: [gradeLevelId], references: [id])
+  id           String      @id @default(uuid())
+  name         String
+  code         String      @unique
+  units        Float
+  description  String?
+  subjectType  SubjectType
+  credits      Float       @default(3)
+  lectureHours Int         @default(3)
+  labHours     Int         @default(0)
 
-  departmentId   String?
-  department     Department? @relation(fields: [departmentId], references: [id])
+  gradeLevelId String
+  gradeLevel   GradeLevel @relation(fields: [gradeLevelId], references: [id])
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
 
   // Prereqs
-  prerequisites  Subject[] @relation("Prerequisites")
+  prerequisites   Subject[] @relation("Prerequisites")
   prerequisiteFor Subject[] @relation("Prerequisites")
-  
+
   // Coreqs
   corequisites   Subject[] @relation("Corequisites")
   corequisiteFor Subject[] @relation("Corequisites")
 
-  enrollments    SubjectEnrollment[]
+  enrollments     SubjectEnrollment[]
   sectionSubjects SectionSubject[]
-  lmsContents    LMSContent[]
-  quizzes        Quiz[]
-  activities     Activity[]
-  grades         Grade[]
+  lmsContents     LMSContent[]
+  quizzes         Quiz[]
+  activities      Activity[]
+  grades          Grade[]
   gradeCategories GradeCategory[]
-  timetableSlots TimetableSlot[]
-  courses        Course[]
+  timetableSlots  TimetableSlot[]
+  courses         Course[]
 }
 
 enum EnrollmentGradeStatus {
@@ -355,39 +355,39 @@ enum EnrollmentGradeStatus {
 }
 
 model SubjectEnrollment {
-  id             String   @id @default(uuid())
-  
-  studentId      String
-  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  subjectId      String
-  subject        Subject @relation(fields: [subjectId], references: [id])
-  
-  sectionId      String
-  section        Section @relation(fields: [sectionId], references: [id])
-  
+  id String @id @default(uuid())
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
   academicYearId String
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
-  
-  status         EnrollmentGradeStatus @default(IN_PROGRESS)
-  finalGrade     Float?
-  remarks        String?
+
+  status     EnrollmentGradeStatus @default(IN_PROGRESS)
+  finalGrade Float?
+  remarks    String?
 
   @@unique([studentId, subjectId, academicYearId])
 }
 
 model SectionSubject {
-  id             String   @id @default(uuid())
-  
-  teacherId      String?
-  teacher        TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
-  
-  subjectId      String
-  subject        Subject @relation(fields: [subjectId], references: [id])
-  
-  sectionId      String
-  section        Section @relation(fields: [sectionId], references: [id])
-  
+  id String @id @default(uuid())
+
+  teacherId String?
+  teacher   TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
   academicYearId String
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
 
@@ -423,26 +423,26 @@ enum DayOfWeek {
 }
 
 model TimetableSlot {
-  id          String   @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   timetableId String
   timetable   Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
-  
-  subjectId   String
-  subject     Subject @relation(fields: [subjectId], references: [id])
-  
-  teacherId   String
-  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
-  
-  roomId      String
-  room        Room @relation(fields: [roomId], references: [id])
-  
-  sectionId   String
-  section     Section @relation(fields: [sectionId], references: [id])
-  
-  dayOfWeek   DayOfWeek
-  startTime   String   // e.g. "08:00"
-  endTime     String   // e.g. "09:00"
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id])
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  dayOfWeek DayOfWeek
+  startTime String // e.g. "08:00"
+  endTime   String // e.g. "09:00"
 }
 
 // ==========================================
@@ -457,100 +457,100 @@ enum AttendanceStatus {
 }
 
 model AttendanceRecord {
-  id          String   @id @default(uuid())
-  
-  studentId   String
-  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  sectionId   String
-  section     Section @relation(fields: [sectionId], references: [id])
-  
-  date        DateTime @db.Date // Only store the date part
-  status      AttendanceStatus
-  scannedAt   DateTime?
-  scannedBy   String? // e.g. ID of teacher who scanned it
+  id String @id @default(uuid())
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  date      DateTime         @db.Date // Only store the date part
+  status    AttendanceStatus
+  scannedAt DateTime?
+  scannedBy String? // e.g. ID of teacher who scanned it
 
   @@unique([studentId, sectionId, date])
 }
 
 model Grade {
-  id                 String   @id @default(uuid())
-  
-  studentId          String
-  student            StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  subjectId          String
-  subject            Subject @relation(fields: [subjectId], references: [id])
-  
-  academicYearId     String
-  academicYear       AcademicYear @relation(fields: [academicYearId], references: [id])
-  
-  quarter            Int      // 1, 2, 3, 4
-  
-  writtenWorks       Float
-  performanceTasks   Float
+  id String @id @default(uuid())
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  quarter Int // 1, 2, 3, 4
+
+  writtenWorks        Float
+  performanceTasks    Float
   quarterlyAssessment Float
-  finalGrade         Float    // Computed (WW + PT + QA) weighted
-  remarks            String?
-  generatedFeedback  String?  @db.Text // From AI
+  finalGrade          Float // Computed (WW + PT + QA) weighted
+  remarks             String?
+  generatedFeedback   String? @db.Text // From AI
 
   @@unique([studentId, subjectId, academicYearId, quarter])
 }
 
 model GradeCategory {
-  id              String   @id @default(uuid())
-  
-  sectionId       String
-  section         Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  
-  subjectId       String
-  subject         Subject @relation(fields: [subjectId], references: [id])
-  
-  academicYearId  String
-  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id])
-  
-  name            String   // e.g., "Quizzes", "Exams"
-  weight          Float    // e.g., 20.0
-  
-  items           GradeItem[]
+  id String @id @default(uuid())
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  name   String // e.g., "Quizzes", "Exams"
+  weight Float // e.g., 20.0
+
+  items GradeItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([sectionId, subjectId, academicYearId, name])
 }
 
 model GradeItem {
-  id              String   @id @default(uuid())
-  
-  categoryId      String
-  category        GradeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
-  name            String   // e.g., "Quiz 1", "Midterm Exam"
-  maxScore        Int      @default(100)
-  date            DateTime? @db.Date // Optional date of the assessment
-  
-  grades          ItemGrade[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id String @id @default(uuid())
+
+  categoryId String
+  category   GradeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  name     String // e.g., "Quiz 1", "Midterm Exam"
+  maxScore Int       @default(100)
+  date     DateTime? @db.Date // Optional date of the assessment
+
+  grades ItemGrade[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ItemGrade {
-  id              String   @id @default(uuid())
-  
-  studentId       String
-  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  gradeItemId     String
-  gradeItem       GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
-  
-  score           Float
-  remarks         String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id String @id @default(uuid())
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  gradeItemId String
+  gradeItem   GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+
+  score   Float
+  remarks String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([studentId, gradeItemId])
 }
 
@@ -559,29 +559,29 @@ model ItemGrade {
 // ==========================================
 
 model Course {
-  id              String   @id @default(uuid())
-  subjectId       String
-  subject         Subject  @relation(fields: [subjectId], references: [id])
-  gradeLevelId    String
-  gradeLevel      GradeLevel @relation(fields: [gradeLevelId], references: [id])
-  teacherId       String
-  teacher         TeacherProfile @relation(fields: [teacherId], references: [id])
-  
-  modules         Module[]
-  
+  id           String         @id @default(uuid())
+  subjectId    String
+  subject      Subject        @relation(fields: [subjectId], references: [id])
+  gradeLevelId String
+  gradeLevel   GradeLevel     @relation(fields: [gradeLevelId], references: [id])
+  teacherId    String
+  teacher      TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  modules Module[]
+
   @@unique([subjectId, gradeLevelId, teacherId])
 }
 
 model Module {
-  id              String   @id @default(uuid())
-  title           String
-  description     String?  @db.Text
-  orderIndex      Int      @default(0)
-  
-  courseId        String
-  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  
-  items           LMSItem[]
+  id          String  @id @default(uuid())
+  title       String
+  description String? @db.Text
+  orderIndex  Int     @default(0)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  items LMSItem[]
 }
 
 enum LMSItemType {
@@ -593,31 +593,31 @@ enum LMSItemType {
 }
 
 model LMSItem {
-  id              String   @id @default(uuid())
-  title           String
-  body            String?  @db.Text
-  type            LMSItemType
-  attachments     Json?
-  orderIndex      Int      @default(0)
-  
-  moduleId        String
-  module          Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  
-  submissions     StudentSubmission[]
+  id          String      @id @default(uuid())
+  title       String
+  body        String?     @db.Text
+  type        LMSItemType
+  attachments Json?
+  orderIndex  Int         @default(0)
+
+  moduleId String
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  submissions StudentSubmission[]
 }
 
 model StudentSubmission {
-  id              String   @id @default(uuid())
-  itemId          String
-  item            LMSItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  
-  studentId       String
-  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  fileUrl         String?
-  score           Float?
-  feedback        String?  @db.Text
-  submittedAt     DateTime @default(now())
+  id     String  @id @default(uuid())
+  itemId String
+  item   LMSItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  fileUrl     String?
+  score       Float?
+  feedback    String?  @db.Text
+  submittedAt DateTime @default(now())
 
   @@unique([itemId, studentId])
 }
@@ -629,36 +629,36 @@ enum QuizStatus {
 }
 
 model Quiz {
-  id          String   @id @default(uuid())
-  title       String
-  
-  teacherId   String
-  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
-  
-  subjectId   String
-  subject     Subject @relation(fields: [subjectId], references: [id])
-  
-  sectionId   String
-  section     Section @relation(fields: [sectionId], references: [id])
-  
-  questions   Json     // Array of questions [ {type, text, options, answer, points} ]
+  id    String @id @default(uuid())
+  title String
+
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  questions   Json // Array of questions [ {type, text, options, answer, points} ]
   totalPoints Int
   deadline    DateTime
   status      QuizStatus @default(DRAFT)
-  
+
   submissions QuizSubmission[]
 }
 
 model QuizSubmission {
-  id                 String   @id @default(uuid())
-  
-  quizId             String
-  quiz               Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  
-  studentId          String
-  student            StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  answers            Json     // Array of answered questions
+  id String @id @default(uuid())
+
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  answers            Json // Array of answered questions
   score              Float
   autoGradedFeedback String?  @db.Text
   submittedAt        DateTime @default(now())
@@ -667,36 +667,36 @@ model QuizSubmission {
 }
 
 model Activity {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   title       String
-  description String   @db.Text
-  attachments Json?    // Array of URLs
-  
-  teacherId   String
-  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
-  
-  subjectId   String
-  subject     Subject @relation(fields: [subjectId], references: [id])
-  
-  sectionId   String
-  section     Section @relation(fields: [sectionId], references: [id])
-  
-  dueDate     DateTime
-  maxScore    Int?
-  
+  description String @db.Text
+  attachments Json? // Array of URLs
+
+  teacherId String
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  dueDate  DateTime
+  maxScore Int?
+
   submissions ActivitySubmission[]
 }
 
 model ActivitySubmission {
-  id          String   @id @default(uuid())
-  
-  activityId  String
-  activity    Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  
-  studentId   String
-  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  fileUrls    Json     // string[]
+  id String @id @default(uuid())
+
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  fileUrls    Json // string[]
   grade       Float?
   feedback    String?  @db.Text
   submittedAt DateTime @default(now())
@@ -711,18 +711,18 @@ enum ContentType {
 }
 
 model LMSContent {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   title       String
-  body        String   @db.Text // Rich Text HTML
-  attachments Json?    // Array of URLs
+  body        String      @db.Text // Rich Text HTML
+  attachments Json? // Array of URLs
   type        ContentType
-  
-  subjectId   String
-  subject     Subject @relation(fields: [subjectId], references: [id])
-  
-  sectionId   String
-  section     Section @relation(fields: [sectionId], references: [id])
-  
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
   publishedAt DateTime?
 }
 
@@ -750,38 +750,38 @@ enum AnnouncementStatus {
 }
 
 model Announcement {
-  id          String   @id @default(uuid())
-  title       String
-  content     String   @db.Text // Rich Text HTML
-  priority    AnnouncementPriority @default(INFO)
-  status      AnnouncementStatus @default(DRAFT)
-  
-  authorId    String
-  author      User     @relation("AnnouncementAuthor", fields: [authorId], references: [id])
-  
+  id       String               @id @default(uuid())
+  title    String
+  content  String               @db.Text // Rich Text HTML
+  priority AnnouncementPriority @default(INFO)
+  status   AnnouncementStatus   @default(DRAFT)
+
+  authorId String
+  author   User   @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+
   // Targeting
   targetRoles       Role[]
   targetGradeLevels String[] // Array of GradeLevel IDs
   targetSections    String[] // Array of Section IDs
-  
+
   // Scheduling
   publishedAt DateTime?
   expiresAt   DateTime?
-  
+
   // Engagement
   readReceipts AnnouncementReadReceipt[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AnnouncementReadReceipt {
-  id              String       @id @default(uuid())
-  announcementId  String
-  announcement    Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  readAt          DateTime     @default(now())
+  id             String       @id @default(uuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt         DateTime     @default(now())
 
   @@unique([announcementId, userId])
 }
@@ -803,46 +803,49 @@ enum ConversationRole {
 }
 
 model Conversation {
-  id          String           @id @default(uuid())
-  title       String?          // Optional: used for group/announcement names
-  type        ConversationType
-  
+  id    String           @id @default(uuid())
+  title String? // Optional: used for group/announcement names
+  type  ConversationType
+
+  contextType String? // e.g., "SUBJECT_GROUP"
+  contextId   String? // e.g., SectionSubject.id
+
   participants ConversationParticipant[]
   messages     Message[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ConversationParticipant {
-  id              String           @id @default(uuid())
-  
-  userId          String
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  conversationId  String
-  conversation    Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  
-  role            ConversationRole @default(MEMBER)
-  lastReadAt      DateTime         @default(now())
-  
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role       ConversationRole @default(MEMBER)
+  lastReadAt DateTime         @default(now())
+
   @@unique([userId, conversationId])
 }
 
 model Message {
-  id              String       @id @default(uuid())
-  
-  conversationId  String
-  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  
-  senderId        String
-  sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  
-  content         String       @db.Text
-  attachmentUrl   String?
-  isDeleted       Boolean      @default(false)
-  
-  createdAt       DateTime     @default(now())
+  id String @id @default(uuid())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  content       String  @db.Text
+  attachmentUrl String?
+  isDeleted     Boolean @default(false)
+
+  createdAt DateTime @default(now())
 }
 
 enum NotificationType {
@@ -854,18 +857,18 @@ enum NotificationType {
 }
 
 model Notification {
-  id          String   @id @default(uuid())
-  
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   title       String
-  body        String   @db.Text
+  body        String           @db.Text
   type        NotificationType
-  referenceId String?  // Optional ID to navigate to (e.g., messageId, quizId)
-  
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  referenceId String? // Optional ID to navigate to (e.g., messageId, quizId)
+
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 // ==========================================
@@ -874,28 +877,28 @@ model Notification {
 // ==========================================
 
 model FeeStructure {
-  id             String         @id @default(uuid())
-  name           String
-  
-  gradeLevelId   String?
-  gradeLevel     GradeLevel?    @relation(fields: [gradeLevelId], references: [id])
-  
+  id   String @id @default(uuid())
+  name String
+
+  gradeLevelId String?
+  gradeLevel   GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+
   academicYearId String
-  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
-  
-  isDefault      Boolean        @default(false)
-  
-  feeItems       FeeItem[]
-  invoices       Invoice[]
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  isDefault Boolean @default(false)
+
+  feeItems FeeItem[]
+  invoices Invoice[]
 }
 
 model FeeItem {
-  id             String         @id @default(uuid())
-  name           String
-  amount         Float
-  
+  id     String @id @default(uuid())
+  name   String
+  amount Float
+
   feeStructureId String
-  feeStructure   FeeStructure   @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
 }
 
 enum InvoiceStatus {
@@ -906,38 +909,38 @@ enum InvoiceStatus {
 }
 
 model Invoice {
-  id             String         @id @default(uuid())
-  
-  studentId      String
-  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
+  id String @id @default(uuid())
+
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
   feeStructureId String
-  feeStructure   FeeStructure   @relation(fields: [feeStructureId], references: [id])
-  
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id])
+
   academicYearId String
-  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
-  
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+
   totalAmount    Float
-  discountAmount Float          @default(0)
+  discountAmount Float         @default(0)
   discountReason String?
   dueDate        DateTime
-  status         InvoiceStatus  @default(PENDING)
-  
-  payments       Payment[]
+  status         InvoiceStatus @default(PENDING)
+
+  payments Payment[]
 
   @@unique([studentId, feeStructureId])
 }
 
 model Payment {
-  id              String         @id @default(uuid())
-  
-  invoiceId       String
-  invoice         Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  
+  id String @id @default(uuid())
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
   amountPaid      Float
-  paymentDate     DateTime       @default(now())
-  method          String         // CASH, GCASH, BANK_TRANSFER
-  referenceNumber String?        @unique
+  paymentDate     DateTime @default(now())
+  method          String // CASH, GCASH, BANK_TRANSFER
+  referenceNumber String?  @unique
 }
 
 // ==========================================
@@ -945,10 +948,10 @@ model Payment {
 // ==========================================
 
 model AuditLog {
-  id          String   @id @default(uuid())
-  adminId     String
-  action      String
-  targetId    String?
-  details     Json?    
-  timestamp   DateTime @default(now())
+  id        String   @id @default(uuid())
+  adminId   String
+  action    String
+  targetId  String?
+  details   Json?
+  timestamp DateTime @default(now())
 }
