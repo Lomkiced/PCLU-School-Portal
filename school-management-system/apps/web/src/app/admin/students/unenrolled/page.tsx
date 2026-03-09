@@ -6,8 +6,15 @@ import Link from "next/link";
 import {
     ChevronRight, Home, Search, Loader2,
     ChevronUp, ChevronDown, ChevronsUpDown, UserX, User, Plus, GraduationCap,
-    Pencil, Trash2,
+    Pencil, Trash2, Eye,
 } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { AddStudentModal } from "@/components/add-student-modal";
 import { AssignSectionModal } from "@/components/assign-section-modal";
 import { EditStudentModal } from "@/components/edit-student-modal";
@@ -194,28 +201,37 @@ export default function UnenrolledStudentsPage() {
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <button
-                                                onClick={() => setAssignStudent(s)}
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs font-bold hover:bg-emerald-500/20 transition-colors"
-                                            >
-                                                <GraduationCap className="w-3.5 h-3.5" /> Enroll
-                                            </button>
-                                            <button
-                                                onClick={() => setEditStudent(s)}
-                                                className="p-2 rounded-lg hover:bg-amber-500/10 text-[hsl(var(--muted-foreground))] hover:text-amber-500 transition-colors"
-                                                title="Edit student"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => setDeleteStudentTarget(s)}
-                                                className="p-2 rounded-lg hover:bg-red-500/10 text-[hsl(var(--muted-foreground))] hover:text-red-500 transition-colors"
-                                                title="Delete student"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" size="sm" className="h-8 rounded-lg border-[hsl(var(--border))] hover:bg-[hsl(var(--muted)/0.5)] transition-colors">
+                                                    <Eye className="w-4 h-4 mr-1.5 text-[hsl(var(--muted-foreground))]" />
+                                                    <span className="text-xs font-semibold">View</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-44 rounded-xl border-[hsl(var(--border))] shadow-lg">
+                                                <DropdownMenuItem
+                                                    onClick={() => setAssignStudent(s)}
+                                                    className="cursor-pointer gap-2 hover:text-emerald-500 focus:text-emerald-500 rounded-lg text-emerald-600 focus:bg-emerald-500/10"
+                                                >
+                                                    <GraduationCap className="w-4 h-4" />
+                                                    <span className="font-medium">Enroll Student</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => setEditStudent(s)}
+                                                    className="cursor-pointer gap-2 hover:text-amber-500 focus:text-amber-500 rounded-lg"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                    <span className="font-medium">Edit Student</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => setDeleteStudentTarget(s)}
+                                                    className="cursor-pointer gap-2 text-red-500 focus:text-red-500 focus:bg-red-500/10 rounded-lg"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    <span className="font-medium">Delete Student</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </td>
                                 </tr>
                             ))}

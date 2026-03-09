@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
-import { useParams } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { Loader2, AlertCircle, Plus, Trash2, CalendarX2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,11 +40,11 @@ interface Timeslot {
     room: { name: string };
 }
 
-export default function ScheduleBuilderPage() {
-    const params = useParams();
-    const gradeId = params.gradeId as string;
-    const sectionId = params.sectionId as string;
+interface ScheduleBuilderProps {
+    sectionId: string;
+}
 
+export function ScheduleBuilder({ sectionId }: ScheduleBuilderProps) {
     const [section, setSection] = useState<any>(null);
     const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
     const [loading, setLoading] = useState(true);
@@ -81,7 +79,6 @@ export default function ScheduleBuilderPage() {
     // Watch for subject change to auto-assign teacher
     useEffect(() => {
         if (selectedSubjectId && inheritedSubjects.length > 0) {
-            // The API returns the subject with its base properties, so the ID we want to match is `s.id`
             const inheritedSub = inheritedSubjects.find((s: any) => s.id === selectedSubjectId);
             if (inheritedSub && inheritedSub.teacherId) {
                 setValue("teacherId", inheritedSub.teacherId, { shouldValidate: true, shouldDirty: true });
@@ -96,13 +93,13 @@ export default function ScheduleBuilderPage() {
         }
     }, [selectedSubjectId, inheritedSubjects, setValue]);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const [secRes, tsRes, teachRes, roomRes, ayRes, inheritedRes] = await Promise.all([
                 api.get(`/sections/${sectionId}`),
                 api.get(`/timetable/section/${sectionId}`),
-                api.get(`/teachers`), // teachers
+                api.get(`/teachers`),
                 api.get(`/rooms`),
                 api.get(`/academic-years`),
                 api.get(`/sections/${sectionId}/subjects`)
@@ -114,18 +111,16 @@ export default function ScheduleBuilderPage() {
             setRooms(roomRes.data.data || []);
             setActiveAy(ayRes.data.data?.find((ay: any) => ay.status === 'ACTIVE') || ayRes.data.data?.[0]);
             setInheritedSubjects(inheritedRes.data.data || []);
-            // Debug the inherited subjects mapping
-            console.log("Inherited Subjects Mapping:", inheritedRes.data.data);
         } catch (err) {
             setError("Failed to load schedule data.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [sectionId]);
 
     useEffect(() => {
         if (sectionId) fetchData();
-    }, [sectionId]);
+    }, [sectionId, fetchData]);
 
     const onSubmit = async (data: TimeslotFormValues) => {
         if (!activeAy) {
@@ -185,56 +180,49 @@ export default function ScheduleBuilderPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
                 <Loader2 className="w-8 h-8 animate-spin text-[hsl(var(--primary))]" />
+                <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">Loading schedule...</p>
             </div>
         );
     }
 
     if (error || !section) {
         return (
-            <div className="flex items-center justify-center h-64 gap-3 text-[hsl(var(--destructive))]">
-                <AlertCircle className="w-5 h-5" />
-                <p className="font-medium">{error || "Section not found"}</p>
+            <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-3 text-[hsl(var(--destructive))]">
+                <AlertCircle className="w-8 h-8" />
+                <p className="font-medium text-lg">{error || "Section not found"}</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Link
-                        href={`/admin/timetable/${gradeId}`}
-                        className="p-2 -ml-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </Link>
-                    <div>
-                        <h2 className="text-xl font-bold">Schedule Builder: {section.name}</h2>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                            Manually assign classes and resolve conflicts
-                        </p>
-                    </div>
+        <div className="space-y-6 flex flex-col h-full">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight">{section.name} Schedule</h2>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                        Manage classes and resolve conflicts for this section
+                    </p>
                 </div>
                 <button
                     onClick={() => handleAddClick("MONDAY", "07:00")}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-white text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-all shadow-md shadow-[hsl(var(--primary)/0.25)]"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[hsl(var(--primary))] text-primary-foreground text-sm font-semibold rounded-lg hover:bg-[hsl(var(--primary-hover))] transition-all shadow-md active:scale-95"
                 >
                     <Plus className="w-4 h-4" /> Add Block
                 </button>
             </div>
 
             {/* Weekly Proportional Grid */}
-            <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl p-4 shadow-sm overflow-x-auto">
+            <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-4 shadow-sm overflow-x-auto flex-1 custom-scrollbar">
                 <div
-                    className="min-w-[800px] grid grid-cols-[80px_repeat(5,1fr)] gap-x-3 relative"
-                    style={{ gridTemplateRows: "auto repeat(48, minmax(1.25rem, 1fr))" }}
+                    className="min-w-[800px] grid grid-cols-[80px_repeat(5,1fr)] gap-x-3 relative h-full"
+                    style={{ gridTemplateRows: "auto repeat(48, minmax(1.5rem, 1fr))" }}
                 >
                     {/* Header Row */}
                     <div className="col-start-1" style={{ gridRow: 1 }}></div>
                     {DAYS.map((day, idx) => (
-                        <div key={day} className="text-center font-semibold text-[hsl(var(--muted-foreground))] pb-4 border-b border-[hsl(var(--border))] z-10 bg-[hsl(var(--card))]" style={{ gridColumnStart: idx + 2, gridRow: 1 }}>
+                        <div key={day} className="text-center font-semibold text-[hsl(var(--muted-foreground))] pb-4 border-b border-[hsl(var(--border))] z-10 bg-[hsl(var(--card))] sticky top-0" style={{ gridColumnStart: idx + 2, gridRow: 1 }}>
                             {day}
                         </div>
                     ))}
@@ -260,7 +248,7 @@ export default function ScheduleBuilderPage() {
                         return (
                             <div
                                 key={slot.id}
-                                className="relative z-10 group bg-[hsl(var(--primary)/0.15)] border border-[hsl(var(--primary)/0.3)] rounded-xl py-1 px-2 overflow-hidden hover:bg-[hsl(var(--primary)/0.2)] hover:shadow-md transition-all flex flex-col justify-start"
+                                className="relative z-10 group bg-[hsl(var(--primary)/0.15)] border border-[hsl(var(--primary)/0.3)] rounded-lg py-1.5 px-2.5 overflow-hidden hover:bg-[hsl(var(--primary)/0.2)] hover:shadow-md transition-all flex flex-col justify-start"
                                 style={{
                                     gridRowStart: rowStart,
                                     gridRowEnd: `span ${span}`,
@@ -288,6 +276,13 @@ export default function ScheduleBuilderPage() {
                             </div>
                         );
                     })}
+
+                    {timeslots.length === 0 && (
+                        <div className="absolute inset-0 top-12 flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))] pointer-events-none">
+                            <CalendarX2 className="w-12 h-12 mb-4 opacity-50" />
+                            <p>No classes scheduled for this section yet.</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -299,7 +294,7 @@ export default function ScheduleBuilderPage() {
                             <label className="text-sm font-medium">Day</label>
                             <select
                                 {...form.register("dayOfWeek")}
-                                className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
+                                className="w-full p-2.5 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:ring-1 focus:ring-[hsl(var(--primary))] outline-none transition-all"
                             >
                                 {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
@@ -310,7 +305,7 @@ export default function ScheduleBuilderPage() {
                             <input
                                 type="time"
                                 {...form.register("startTime")}
-                                className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
+                                className="w-full p-2.5 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:ring-1 focus:ring-[hsl(var(--primary))] outline-none transition-all"
                             />
                             {errors.startTime && <p className="text-xs text-red-500">{errors.startTime.message}</p>}
                         </div>
@@ -319,7 +314,7 @@ export default function ScheduleBuilderPage() {
                             <input
                                 type="time"
                                 {...form.register("endTime")}
-                                className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
+                                className="w-full p-2.5 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:ring-1 focus:ring-[hsl(var(--primary))] outline-none transition-all"
                             />
                             {errors.endTime && <p className="text-xs text-red-500">{errors.endTime.message}</p>}
                         </div>
@@ -329,7 +324,7 @@ export default function ScheduleBuilderPage() {
                         <label className="text-sm font-medium">Subject</label>
                         <select
                             {...form.register("subjectId")}
-                            className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
+                            className="w-full p-2.5 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:ring-1 focus:ring-[hsl(var(--primary))] outline-none transition-all"
                         >
                             <option value="">-- Select Subject --</option>
                             {inheritedSubjects.map((sub: any) => (
@@ -343,7 +338,7 @@ export default function ScheduleBuilderPage() {
                         <label className="text-sm font-medium">Teacher</label>
                         <select
                             {...form.register("teacherId")}
-                            className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] disabled:bg-[hsl(var(--muted))] disabled:text-[hsl(var(--muted-foreground))] disabled:cursor-not-allowed focus:border-[hsl(var(--primary))] outline-none"
+                            className="w-full p-2.5 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] disabled:bg-[hsl(var(--muted))] disabled:text-[hsl(var(--muted-foreground))] disabled:cursor-not-allowed focus:border-[hsl(var(--primary))] focus:ring-1 focus:ring-[hsl(var(--primary))] outline-none transition-all"
                             disabled={isTeacherDisabled}
                         >
                             <option value="" disabled={isTeacherDisabled}>-- Select Teacher --</option>
@@ -352,14 +347,14 @@ export default function ScheduleBuilderPage() {
                             ))}
                         </select>
                         {errors.teacherId && <p className="text-xs text-red-500">{errors.teacherId.message}</p>}
-                        {isTeacherDisabled && <p className="text-xs font-semibold text-[hsl(var(--primary))]">Teacher locked from inherit assignment.</p>}
+                        {isTeacherDisabled && <p className="text-xs font-semibold text-[hsl(var(--primary))] mt-1">Teacher assigned from curriculum.</p>}
                     </div>
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Room</label>
                         <select
                             {...form.register("roomId")}
-                            className="w-full p-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] outline-none"
+                            className="w-full p-2.5 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--background))] focus:border-[hsl(var(--primary))] focus:ring-1 focus:ring-[hsl(var(--primary))] outline-none transition-all"
                         >
                             <option value="">-- Select Room --</option>
                             {rooms.map((room) => (
@@ -373,9 +368,9 @@ export default function ScheduleBuilderPage() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="w-full py-2.5 bg-[hsl(var(--primary))] text-white rounded-xl font-medium hover:bg-[hsl(var(--primary-hover))] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="w-full py-2.5 bg-[hsl(var(--primary))] text-primary-foreground rounded-lg font-medium hover:bg-[hsl(var(--primary-hover))] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Block"}
+                            {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Block"}
                         </button>
                     </div>
                 </form>

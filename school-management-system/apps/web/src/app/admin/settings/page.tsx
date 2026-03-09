@@ -9,15 +9,15 @@ export default function AdminSettingsPage() {
                 <p className="text-sm text-[hsl(var(--muted-foreground))]">Manage system configuration</p>
             </div>
 
-            {/* Academic Year */}
+            {/* Academic Structure */}
             <div className="bg-[hsl(var(--card))] rounded-2xl p-6 card-shadow border border-[hsl(var(--border))] space-y-4">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h3 className="font-bold text-lg">Academic Year & Grading Config</h3>
-                        <p className="text-sm text-muted-foreground mt-1">Manage the underlying timeline for the school, including grading period weightages and active semesters.</p>
+                        <h3 className="font-bold text-lg">Academic Structure</h3>
+                        <p className="text-sm text-muted-foreground mt-1">Manage Academic Years, Grading Systems, and Term/Semester configurations.</p>
                     </div>
-                    <Link href="/admin/settings/academic-years">
-                        <Button>Configure Timeline</Button>
+                    <Link href="/admin/settings/academic-structure">
+                        <Button>Configure Structure</Button>
                     </Link>
                 </div>
             </div>
