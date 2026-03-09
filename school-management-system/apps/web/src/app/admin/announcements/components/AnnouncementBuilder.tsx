@@ -49,7 +49,12 @@ export function AnnouncementBuilder({ open, onClose, onSubmit }: AnnouncementBui
     });
 
     const onSubmitForm = (data: AnnouncementFormValues) => {
-        onSubmit(data);
+        // Strip out empty strings for dates so backend validation doesn't fail
+        const payload = { ...data };
+        if (!payload.publishedAt) delete payload.publishedAt;
+        if (!payload.expiresAt) delete payload.expiresAt;
+
+        onSubmit(payload);
     };
 
     return (
@@ -111,19 +116,42 @@ export function AnnouncementBuilder({ open, onClose, onSubmit }: AnnouncementBui
                             <Controller
                                 name="targetRoles"
                                 control={control}
-                                render={({ field }) => (
-                                    <select
-                                        multiple
-                                        value={field.value}
-                                        onChange={(e) => field.onChange(Array.from(e.target.selectedOptions, option => option.value))}
-                                        className="w-full p-2 rounded-xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-sm h-24"
-                                    >
-                                        <option value="STUDENT">Students</option>
-                                        <option value="TEACHER">Teachers</option>
-                                        <option value="PARENT">Parents</option>
-                                        <option value="ADMIN">Admins</option>
-                                    </select>
-                                )}
+                                render={({ field }) => {
+                                    const toggleRole = (role: string) => {
+                                        const current = field.value || [];
+                                        if (current.includes(role)) {
+                                            field.onChange(current.filter(r => r !== role));
+                                        } else {
+                                            field.onChange([...current, role]);
+                                        }
+                                    };
+
+                                    const roles = [
+                                        { id: 'STUDENT', label: 'Students' },
+                                        { id: 'TEACHER', label: 'Teachers' },
+                                        { id: 'PARENT', label: 'Parents' },
+                                        { id: 'ADMIN', label: 'Admins' }
+                                    ];
+
+                                    return (
+                                        <div className="grid grid-cols-2 gap-2 mt-1">
+                                            {roles.map(role => {
+                                                const isSelected = (field.value || []).includes(role.id);
+                                                return (
+                                                    <div
+                                                        key={role.id}
+                                                        onClick={() => toggleRole(role.id)}
+                                                        className={`px-3 py-2 cursor-pointer border rounded-xl text-center text-xs transition-colors ${isSelected
+                                                            ? 'bg-primary text-primary-foreground border-primary font-medium'
+                                                            : 'bg-[hsl(var(--muted))] border-[hsl(var(--border))] hover:border-primary/50 text-[hsl(var(--muted-foreground))]'}`}
+                                                    >
+                                                        {role.label}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                }}
                             />
                         </div>
 

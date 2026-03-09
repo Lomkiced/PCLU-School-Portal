@@ -19,7 +19,7 @@ export class AnnouncementsController {
             success: true,
             data: await this.announcementsService.create({
                 ...createAnnouncementDto,
-                authorId: user.sub
+                authorId: user.id || user.sub
             }),
             message: 'Announcement published successfully'
         };

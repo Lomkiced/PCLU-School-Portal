@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AdminHeader } from "@/components/admin/AdminHeader";
 import {
     LayoutDashboard,
     Users,
@@ -144,40 +145,12 @@ export default function AdminLayout({
                 </div>
             </aside>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
-                {/* Top Bar */}
-                <header className="h-16 flex items-center justify-between px-6 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] shrink-0">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setMobileOpen(true)}
-                            className="lg:hidden p-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
-                        >
-                            <Menu className="w-5 h-5" />
-                        </button>
-                        <h1 className="text-lg font-bold capitalize">
-                            {adminNavItems.find(
-                                (i) =>
-                                    pathname === i.href ||
-                                    (i.href !== "/admin" && pathname.startsWith(i.href))
-                            )?.label || "Dashboard"}
-                        </h1>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="text-right hidden sm:block">
-                            <p className="text-sm font-semibold">{user?.email}</p>
-                            <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                                Administrator
-                            </p>
-                        </div>
-                        <div className="w-9 h-9 rounded-full bg-[hsl(var(--primary))] flex items-center justify-center text-white font-semibold text-sm">
-                            {user?.email?.[0]?.toUpperCase() || "A"}
-                        </div>
-                    </div>
-                </header>
+            {/* Main Content Area */}
+            <div id="main-scroll-area" className="flex-1 flex flex-col min-w-0 overflow-y-auto relative bg-[hsl(var(--background))]">
+                <AdminHeader setMobileOpen={setMobileOpen} />
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-6">{children}</main>
+                <main className="flex-1 p-4 md:p-6 w-full max-w-7xl mx-auto">{children}</main>
             </div>
         </div>
     );
