@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ChevronRight, Home } from "lucide-react";
 
-interface BreadcrumbItem {
+export interface BreadcrumbItem {
     label: string;
-    href: string;
+    href?: string;
+    onClick?: () => void;
     active?: boolean;
 }
 
@@ -14,12 +15,16 @@ export default function BreadcrumbNav({ items }: { items: BreadcrumbItem[] }) {
                 <Home className="w-4 h-4" />
             </Link>
             {items.map((item, index) => (
-                <div key={item.href} className="flex items-center space-x-1">
+                <div key={item.href || item.label} className="flex items-center space-x-1">
                     <ChevronRight className="w-4 h-4" />
                     {item.active ? (
                         <span className="font-medium text-foreground">{item.label}</span>
+                    ) : item.onClick ? (
+                        <button onClick={item.onClick} className="hover:text-foreground transition-colors">
+                            {item.label}
+                        </button>
                     ) : (
-                        <Link href={item.href} className="hover:text-foreground transition-colors">
+                        <Link href={item.href!} className="hover:text-foreground transition-colors">
                             {item.label}
                         </Link>
                     )}

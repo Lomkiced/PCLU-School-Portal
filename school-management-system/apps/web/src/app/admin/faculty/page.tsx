@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Building2, Users, ChevronRight, Loader2, AlertCircle, Plus, Crown, LayoutDashboard } from "lucide-react";
-import { CreateDepartmentModal } from "@/components/create-department-modal";
+import { Building2, Users, ChevronRight, Loader2, AlertCircle, Plus, Crown, LayoutDashboard, Settings } from "lucide-react";
 import { AddFacultyModal } from "@/components/add-faculty-modal";
 import { DepartmentDetail } from "@/components/faculty/department-detail";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,7 +23,6 @@ export default function FacultyPage() {
     const [error, setError] = useState("");
 
     // Modal state
-    const [showCreateModal, setShowCreateModal] = useState(false);
     const [showAddFacultyModal, setShowAddFacultyModal] = useState(false);
 
     // Navigation state
@@ -98,49 +96,40 @@ export default function FacultyPage() {
     };
 
     return (
-        <div className="space-y-6 max-w-[1600px] mx-auto min-h-[calc(100vh-8rem)] flex flex-col">
+        <div className="space-y-8 max-w-[1600px] mx-auto min-h-[calc(100vh-8rem)] flex flex-col relative px-4 md:px-8 pb-12">
 
-            {/* Persistent Dynamic Breadcrumb Header */}
-            <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl p-4 md:px-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-4 z-20">
-                <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1 sm:pb-0 whitespace-nowrap mask-linear-fade">
+            {/* Premium Floating Navigation */}
+            <div className="bg-background/60 backdrop-blur-xl border border-border/50 rounded-full px-6 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-6 z-30 mb-4 w-full max-w-4xl mx-auto transition-all duration-500 hover:bg-background/80 hover:shadow-[0_8px_30px_rgb(0,0,0,0.1)]">
+                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 sm:pb-0 whitespace-nowrap mask-linear-fade">
                     <button
                         onClick={goToOverview}
-                        className={`flex items-center gap-2 text-sm font-semibold transition-colors ${currentView === 'overview' ? 'text-[hsl(var(--foreground))] cursor-default' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'}`}
+                        className={`group relative flex items-center gap-2.5 text-sm font-semibold transition-all duration-300 px-4 py-2 rounded-full ${currentView === 'overview' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                     >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${currentView === 'overview' ? 'bg-[hsl(var(--primary))] text-primary-foreground shadow-sm' : 'bg-[hsl(var(--muted))]'}`}>
-                            <LayoutDashboard className="w-4 h-4" />
-                        </div>
+                        {currentView === 'overview' && (
+                            <motion.div layoutId="nav-bg" className="absolute inset-0 bg-primary/10 rounded-full -z-10" />
+                        )}
+                        <LayoutDashboard className={`w-4 h-4 transition-transform duration-300 ${currentView === 'overview' ? 'scale-110' : 'group-hover:scale-110'}`} />
                         Faculty Overview
                     </button>
 
                     {selectedDepartmentId && (
                         <>
-                            <ChevronRight className="w-4 h-4 text-[hsl(var(--muted-foreground))]/50 shrink-0 mx-1" />
+                            <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0 mx-0.5" />
                             <button
-                                className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--foreground))] cursor-default"
+                                className={`group relative flex items-center gap-2 text-sm font-semibold transition-all duration-300 px-4 py-2 rounded-full text-primary`}
                             >
-                                <div className="px-3 py-1.5 rounded-lg border bg-[hsl(var(--background))] border-[hsl(var(--border))] shadow-sm">
-                                    {selectedDepartmentName}
-                                </div>
+                                <motion.div layoutId="nav-bg" className="absolute inset-0 bg-primary/10 rounded-full -z-10" />
+                                {selectedDepartmentName}
                             </button>
                         </>
                     )}
                 </div>
 
                 {/* Conditional Actions */}
-                {currentView === "overview" && (
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-white text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-all shadow-md shadow-[hsl(var(--primary)/0.25)] shrink-0"
-                    >
-                        <Plus className="w-4 h-4" /> Create Department
-                    </button>
-                )}
-
                 {currentView === "details" && selectedDepartmentId && (
                     <button
                         onClick={() => setShowAddFacultyModal(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[hsl(var(--primary))] text-white text-sm font-semibold hover:bg-[hsl(var(--primary-hover))] transition-all shadow-md shadow-[hsl(var(--primary)/0.25)] shrink-0"
+                        className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:-translate-y-0.5 transition-all duration-300"
                     >
                         <Plus className="w-4 h-4" /> Add Faculty
                     </button>
@@ -161,84 +150,104 @@ export default function FacultyPage() {
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                             className="space-y-8"
                         >
-                            {/* Stats */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div className="bg-[hsl(var(--card))] rounded-2xl p-5 border border-[hsl(var(--border))] shadow-sm">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-[hsl(var(--primary)/0.1)] flex items-center justify-center">
-                                            <Building2 className="w-6 h-6 text-[hsl(var(--primary))]" />
-                                        </div>
+                            {/* Premium Stats */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="relative group overflow-hidden bg-card/50 backdrop-blur-sm rounded-[2rem] p-6 border border-border/50 shadow-sm transition-all duration-500 hover:shadow-md hover:-translate-y-1 hover:border-primary/30">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    <div className="relative flex items-center justify-between">
                                         <div>
-                                            <p className="text-3xl font-black text-[hsl(var(--foreground))] tracking-tight">{departments.length}</p>
-                                            <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Departments</p>
+                                            <p className="text-sm font-medium text-muted-foreground mb-1 tracking-wide uppercase text-[10px]">Total Departments</p>
+                                            <div className="flex items-baseline gap-2">
+                                                <p className="text-4xl font-black text-foreground tracking-tighter">{departments.length}</p>
+                                            </div>
+                                        </div>
+                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/10 shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500">
+                                            <Building2 className="w-7 h-7 text-primary" />
                                         </div>
                                     </div>
                                 </div>
-                                <div className="bg-[hsl(var(--card))] rounded-2xl p-5 border border-[hsl(var(--border))] shadow-sm">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                                            <Users className="w-6 h-6 text-indigo-600" />
-                                        </div>
+                                <div className="relative group overflow-hidden bg-card/50 backdrop-blur-sm rounded-[2rem] p-6 border border-border/50 shadow-sm transition-all duration-500 hover:shadow-md hover:-translate-y-1 hover:border-indigo-500/30">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    <div className="relative flex items-center justify-between">
                                         <div>
-                                            <p className="text-3xl font-black text-[hsl(var(--foreground))] tracking-tight">{totalTeachers}</p>
-                                            <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Total Faculty Staff</p>
+                                            <p className="text-sm font-medium text-muted-foreground mb-1 tracking-wide uppercase text-[10px]">Total Faculty Staff</p>
+                                            <div className="flex items-baseline gap-2">
+                                                <p className="text-4xl font-black text-foreground tracking-tighter">{totalTeachers}</p>
+                                            </div>
+                                        </div>
+                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-indigo-500/5 flex items-center justify-center border border-indigo-500/10 shadow-inner group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500">
+                                            <Users className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Department Cards */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                                {departments.map((dept) => (
-                                    <div
+                            {/* Premium Department Cards Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
+                                {departments.map((dept, index) => (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.1 }}
                                         key={dept.id}
                                         onClick={() => goToDetails(dept.id, dept.name)}
-                                        className="group cursor-pointer bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))] box-shadow-sm hover:box-shadow-md hover:border-[hsl(var(--primary)/0.4)] hover:-translate-y-1 transition-all duration-300"
+                                        className="group relative cursor-pointer bg-card rounded-[1.5rem] p-1 border border-border/50 shadow-sm transition-all duration-500 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5"
                                     >
-                                        <div className="flex items-start justify-between mb-5">
-                                            <div className="w-12 h-12 rounded-xl bg-[hsl(var(--primary)/0.1)] flex items-center justify-center">
-                                                <Building2 className="w-6 h-6 text-[hsl(var(--primary))]" />
-                                            </div>
-                                            <div className="w-8 h-8 rounded-full bg-[hsl(var(--muted))] flex items-center justify-center group-hover:bg-[hsl(var(--primary)/0.1)] transition-colors">
-                                                <ChevronRight className="w-4 h-4 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] group-hover:translate-x-0.5 transition-all" />
-                                            </div>
-                                        </div>
+                                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[1.5rem]" />
 
-                                        <h3 className="font-bold text-xl mb-3 text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--primary))] transition-colors">
-                                            {dept.name}
-                                        </h3>
-
-                                        <div className="space-y-2 mt-4 text-sm text-[hsl(var(--muted-foreground))]">
-                                            <div className="flex items-center justify-between bg-[hsl(var(--muted)/0.5)] px-3 py-2 rounded-lg">
-                                                <div className="flex items-center gap-2">
-                                                    <Users className="w-4 h-4" />
-                                                    <span className="font-medium">Faculty Limit</span>
+                                        <div className="bg-background/50 backdrop-blur-sm rounded-[1.25rem] p-6 h-full border border-transparent group-hover:border-primary/10 transition-colors flex flex-col">
+                                            <div className="flex items-start justify-between mb-6">
+                                                <div className="w-12 h-12 rounded-[1rem] bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                                                    <Building2 className="w-6 h-6 text-primary" />
                                                 </div>
-                                                <span className="font-bold text-[hsl(var(--foreground))]">{dept._count.teachers}</span>
+                                                <div className="w-10 h-10 rounded-full bg-muted/60 flex items-center justify-center group-hover:bg-primary group-hover:shadow-[0_0_15px_hsl(var(--primary)/0.4)] transition-all duration-300">
+                                                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary-foreground group-hover:translate-x-0.5 transition-all" />
+                                                </div>
                                             </div>
 
-                                            <div className="px-1 text-xs mt-2">
-                                                {dept.headTeacher ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <Crown className="w-4 h-4 text-amber-500 shrink-0" />
-                                                        <span className="truncate"><span className="opacity-70">Head:</span> <span className="font-medium text-[hsl(var(--foreground))]">{dept.headTeacher.firstName} {dept.headTeacher.lastName}</span></span>
+                                            <h3 className="font-extrabold text-xl text-foreground group-hover:text-primary transition-colors tracking-tight mb-4 pr-4">
+                                                {dept.name}
+                                            </h3>
+
+                                            <div className="mt-auto space-y-4 pt-4 border-t border-border/50">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <div className="flex items-center gap-2 text-muted-foreground font-semibold">
+                                                        <Users className="w-4 h-4 text-primary/70" />
+                                                        <span>Faculty Limit</span>
                                                     </div>
-                                                ) : (
-                                                    <p className="opacity-50 italic">No head assigned</p>
-                                                )}
+                                                    <span className="font-black text-foreground bg-muted/50 px-2.5 py-0.5 rounded-md">{dept._count.teachers}</span>
+                                                </div>
+
+                                                <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${dept.headTeacher ? 'bg-amber-500/10' : 'bg-muted'}`}>
+                                                        <Crown className={`w-4 h-4 ${dept.headTeacher ? 'text-amber-500' : 'text-muted-foreground/40'}`} />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[10px] font-bold tracking-widest uppercase mb-0.5 text-muted-foreground/70">Department Head</p>
+                                                        {dept.headTeacher ? (
+                                                            <p className="font-bold text-foreground truncate">{dept.headTeacher.firstName} {dept.headTeacher.lastName}</p>
+                                                        ) : (
+                                                            <p className="italic opacity-50">Unassigned</p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
                             </div>
 
                             {departments.length === 0 && (
-                                <div className="text-center py-20 bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] border-dashed shadow-sm">
-                                    <div className="w-20 h-20 bg-[hsl(var(--primary)/0.05)] rounded-full flex items-center justify-center mx-auto mb-5">
-                                        <Building2 className="w-10 h-10 text-[hsl(var(--muted-foreground)/0.5)]" />
+                                <div className="text-center py-20 bg-card/60 rounded-[2rem] border border-border/50 border-dashed shadow-sm">
+                                    <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-5">
+                                        <Building2 className="w-10 h-10 text-muted-foreground/50" />
                                     </div>
-                                    <h3 className="text-2xl font-bold mb-2 text-[hsl(var(--foreground))]">No Departments Found</h3>
-                                    <p className="text-[hsl(var(--muted-foreground))] font-medium max-w-md mx-auto">Create departments first to begin registering faculty members into the portal.</p>
+                                    <h3 className="text-2xl font-bold mb-2 text-foreground">No Departments Configured</h3>
+                                    <p className="text-muted-foreground font-medium max-w-md mx-auto mb-6">Base departments have not been set up yet. Please configure your academic structure in settings.</p>
+                                    <button className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-muted text-foreground hover:bg-muted/80 transition-colors text-sm font-semibold">
+                                        <Settings className="w-4 h-4" />
+                                        Go to Settings
+                                    </button>
                                 </div>
                             )}
                         </motion.div>
@@ -260,12 +269,7 @@ export default function FacultyPage() {
                 </AnimatePresence>
             </div>
 
-            {/* Modals placed here to be accessible globally if needed */}
-            <CreateDepartmentModal
-                open={showCreateModal}
-                onClose={() => setShowCreateModal(false)}
-                onSuccess={() => { setShowCreateModal(false); fetchDepartments(); }}
-            />
+            {/* Global Modals */}
             {currentView === "details" && selectedDepartmentId && (
                 <AddFacultyModal
                     open={showAddFacultyModal}

@@ -5,9 +5,10 @@ import { api } from "@/lib/api";
 import Link from "next/link";
 import {
     Users, Search, Loader2, AlertCircle,
-    ChevronUp, ChevronDown, ChevronsUpDown, Mail, User, BookOpen, Edit
+    ChevronUp, ChevronDown, ChevronsUpDown, Mail, User, BookOpen, Edit, School, Info
 } from "lucide-react";
 import { AssignTeacherModal } from "@/components/assign-section-subject-modal";
+import { motion } from "framer-motion";
 
 interface Student {
     id: string;
@@ -164,44 +165,97 @@ export function SectionDetail({ sectionId, gradeId }: SectionDetailProps) {
     };
 
     return (
-        <div className="space-y-6">
-            {/* Header Area */}
-            <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-2xl p-6 shadow-sm">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-bold flex items-center gap-3">
-                            {section.gradeLevel.name} — {section.name}
-                            <span className="px-2.5 py-1 bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] text-xs font-bold rounded-full">
-                                {section._count.students} / {section.capacity}
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+            {/* Premium Hero Header */}
+            <div className="relative overflow-hidden bg-card/50 backdrop-blur-xl border border-border/50 rounded-[2rem] p-8 sm:p-10 shadow-sm transition-all duration-500 hover:shadow-md hover:border-primary/20 group">
+                <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 group-hover:rotate-12 transition-transform duration-1000 ease-out">
+                    <School className="w-64 h-64 text-primary" />
+                </div>
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
+                    <div className="max-w-3xl">
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className="px-3 py-1 bg-muted/50 border border-border/50 rounded-full text-xs font-bold tracking-widest uppercase text-muted-foreground backdrop-blur-sm">
+                                {section.gradeLevel.name}
                             </span>
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary/40"></div>
+                            <span className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                                <Users className="w-4 h-4" />
+                                {section._count.students} / {section.capacity} Enrolled
+                            </span>
+                        </div>
+
+                        <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground mb-6">
+                            {section.name}
                         </h2>
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3 text-sm text-[hsl(var(--muted-foreground))]">
-                            <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 opacity-70" />
-                                <span>Adviser: <strong className="text-[hsl(var(--foreground))] font-semibold">{section.adviser ? `${section.adviser.firstName} ${section.adviser.lastName}` : 'Unassigned'}</strong></span>
+
+                        <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+                            <div className="flex items-center gap-3 p-3 rounded-2xl bg-background/50 border border-border/30 backdrop-blur-sm pr-6">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                                    <User className="w-5 h-5 text-indigo-500" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-0.5">Section Adviser</p>
+                                    <p className="font-semibold text-foreground">{section.adviser ? `${section.adviser.firstName} ${section.adviser.lastName}` : <span className="text-muted-foreground/50 italic">Unassigned</span>}</p>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <BookOpen className="w-4 h-4 opacity-70" />
-                                <span>Room: <strong className="text-[hsl(var(--foreground))] font-semibold">{section.room ? section.room.name : 'Unassigned'}</strong></span>
+
+                            <div className="flex items-center gap-3 p-3 rounded-2xl bg-background/50 border border-border/30 backdrop-blur-sm pr-6">
+                                <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center border border-teal-500/20">
+                                    <BookOpen className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-0.5">Designated Room</p>
+                                    <p className="font-semibold text-foreground">{section.room ? section.room.name : <span className="text-muted-foreground/50 italic">Unassigned</span>}</p>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Capacity Ring */}
+                    <div className="hidden lg:flex flex-col items-center justify-center shrink-0 w-32 h-32 relative">
+                        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" className="stroke-muted/40" strokeWidth="8" />
+                            <circle
+                                cx="50" cy="50" r="45" fill="none"
+                                className="stroke-primary"
+                                strokeWidth="8"
+                                strokeLinecap="round"
+                                strokeDasharray={`${(section._count.students / section.capacity) * 283} 283`}
+                                style={{ transition: "stroke-dasharray 1.5s ease-out" }}
+                            />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-2xl font-black text-foreground">
+                                {Math.round((section._count.students / section.capacity) * 100)}%
+                            </span>
+                            <span className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">Filled</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Custom Interactive Tabs */}
-            <div className="flex p-1 bg-[hsl(var(--muted)/0.5)] rounded-xl border border-[hsl(var(--border)/0.5)] w-fit">
+            {/* Sleek Animated Tabs */}
+            <div className="flex p-1.5 bg-card/60 backdrop-blur-sm rounded-[1.25rem] border border-border/50 w-fit relative z-10 shadow-sm">
                 <button
                     onClick={() => setActiveTab("students")}
-                    className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === "students" ? "bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"}`}
+                    className={`relative px-6 py-3 text-sm font-bold rounded-xl transition-all flex items-center gap-2.5 ${activeTab === "students" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
                 >
-                    <Users className="w-4 h-4" /> Enrolled Students ({section.students.length})
+                    {activeTab === "students" && (
+                        <motion.div layoutId="tab-indicator" className="absolute inset-0 bg-background rounded-xl shadow-[0_2px_10px_rgb(0,0,0,0.05)] dark:shadow-[0_2px_10px_rgb(0,0,0,0.2)] border border-border/50 -z-10" />
+                    )}
+                    <Users className="w-4 h-4" /> Enrolled Students
+                    <span className="ml-1.5 bg-muted/80 text-foreground px-2 py-0.5 rounded-md text-xs">{section.students.length}</span>
                 </button>
                 <button
                     onClick={() => setActiveTab("subjects")}
-                    className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === "subjects" ? "bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm" : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"}`}
+                    className={`relative px-6 py-3 text-sm font-bold rounded-xl transition-all flex items-center gap-2.5 ${activeTab === "subjects" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
                 >
-                    <BookOpen className="w-4 h-4" /> Curriculum Subjects ({inheritedSubjects.length})
+                    {activeTab === "subjects" && (
+                        <motion.div layoutId="tab-indicator" className="absolute inset-0 bg-background rounded-xl shadow-[0_2px_10px_rgb(0,0,0,0.05)] dark:shadow-[0_2px_10px_rgb(0,0,0,0.2)] border border-border/50 -z-10" />
+                    )}
+                    <BookOpen className="w-4 h-4" /> Curriculum Subjects
+                    <span className="ml-1.5 bg-muted/80 text-foreground px-2 py-0.5 rounded-md text-xs">{inheritedSubjects.length}</span>
                 </button>
             </div>
 
@@ -219,26 +273,25 @@ export function SectionDetail({ sectionId, gradeId }: SectionDetailProps) {
                         />
                     </div>
 
-                    <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] shadow-sm overflow-hidden">
+                    <div className="bg-card/40 backdrop-blur-sm rounded-[1.5rem] border border-border/50 shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)]">
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))] whitespace-nowrap">
-                                            <button onClick={() => handleSort("studentId")} className="hover:text-[hsl(var(--foreground))] transition-colors">
+                                    <tr className="border-b border-border/50 bg-muted/20">
+                                        <th className="text-left px-6 py-4 font-bold text-muted-foreground whitespace-nowrap">
+                                            <button onClick={() => handleSort("studentId")} className="flex items-center gap-1.5 hover:text-foreground transition-colors group">
                                                 Student ID <SortIcon field="studentId" />
                                             </button>
                                         </th>
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))] whitespace-nowrap">
-                                            <button onClick={() => handleSort("lastName")} className="hover:text-[hsl(var(--foreground))] transition-colors">
-                                                Name <SortIcon field="lastName" />
+                                        <th className="text-left px-6 py-4 font-bold text-muted-foreground whitespace-nowrap">
+                                            <button onClick={() => handleSort("lastName")} className="flex items-center gap-1.5 hover:text-foreground transition-colors group">
+                                                Student Name <SortIcon field="lastName" />
                                             </button>
                                         </th>
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))] hidden md:table-cell">Gender</th>
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))] hidden lg:table-cell">Email</th>
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))] hidden lg:table-cell">Guardian</th>
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))] whitespace-nowrap">
-                                            <button onClick={() => handleSort("enrollmentStatus")} className="hover:text-[hsl(var(--foreground))] transition-colors">
+                                        <th className="text-left px-6 py-4 font-bold text-muted-foreground hidden md:table-cell">Details</th>
+                                        <th className="text-left px-6 py-4 font-bold text-muted-foreground hidden lg:table-cell">Contact</th>
+                                        <th className="text-left px-6 py-4 font-bold text-muted-foreground whitespace-nowrap">
+                                            <button onClick={() => handleSort("enrollmentStatus")} className="flex items-center gap-1.5 hover:text-foreground transition-colors group">
                                                 Status <SortIcon field="enrollmentStatus" />
                                             </button>
                                         </th>
@@ -246,37 +299,43 @@ export function SectionDetail({ sectionId, gradeId }: SectionDetailProps) {
                                 </thead>
                                 <tbody>
                                     {paginatedStudents.map((student) => (
-                                        <tr key={student.id} className="border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--muted)/0.3)] transition-colors">
-                                            <td className="px-5 py-3.5 font-mono text-xs text-[hsl(var(--muted-foreground))]">{student.studentId}</td>
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-[hsl(var(--primary)/0.1)] flex items-center justify-center shrink-0">
-                                                        <User className="w-4 h-4 text-[hsl(var(--primary))]" />
+                                        <tr key={student.id} className="border-b border-border/30 last:border-0 hover:bg-muted/30 transition-colors group/row">
+                                            <td className="px-6 py-4 font-mono text-xs font-semibold text-muted-foreground group-hover/row:text-foreground transition-colors">
+                                                {student.studentId}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-[0.8rem] bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 border border-primary/10 group-hover/row:scale-105 transition-transform duration-300">
+                                                        <User className="w-5 h-5 text-primary" />
                                                     </div>
                                                     <div>
-                                                        <p className="font-semibold text-sm">
+                                                        <p className="font-bold text-sm text-foreground">
                                                             {student.lastName}, {student.firstName}
                                                             {student.middleName ? ` ${student.middleName.charAt(0)}.` : ""}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground/70 flex items-center gap-1.5 mt-0.5">
+                                                            <Mail className="w-3 h-3" /> {student.user.email}
                                                         </p>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-3.5 hidden md:table-cell">
-                                                <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${student.gender === "MALE" ? "bg-blue-500/10 text-blue-500" : student.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500" : "bg-gray-500/10 text-gray-500"}`}>
-                                                    {student.gender === "MALE" ? "Male" : student.gender === "FEMALE" ? "Female" : student.gender === "OTHER" ? "Other" : student.gender}
+                                            <td className="px-6 py-4 hidden md:table-cell">
+                                                <span className={`inline-flex px-2.5 py-1 rounded-md text-[10px] font-black tracking-wider uppercase ${student.gender === "MALE" ? "bg-blue-500/10 text-blue-500 border border-blue-500/20" :
+                                                        student.gender === "FEMALE" ? "bg-pink-500/10 text-pink-500 border border-pink-500/20" :
+                                                            "bg-gray-500/10 text-gray-500 border border-gray-500/20"
+                                                    }`}>
+                                                    {student.gender}
                                                 </span>
                                             </td>
-                                            <td className="px-5 py-3.5 hidden lg:table-cell">
-                                                <div className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]">
-                                                    <Mail className="w-3.5 h-3.5" /> {student.user.email}
+                                            <td className="px-6 py-4 hidden lg:table-cell">
+                                                <div className="text-xs space-y-1 text-muted-foreground">
+                                                    <p className="font-semibold text-foreground">{student.parents?.[0] ? `${student.parents[0].firstName} ${student.parents[0].lastName}` : student.guardianName}</p>
+                                                    <p className="opacity-80 font-mono">{student.parents?.[0]?.contactNumber || student.guardianContact}</p>
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-3.5 hidden lg:table-cell text-xs text-[hsl(var(--muted-foreground))]">
-                                                <p className="font-medium text-[hsl(var(--foreground))]">{student.parents?.[0] ? `${student.parents[0].firstName} ${student.parents[0].lastName}` : student.guardianName}</p>
-                                                <p>{student.parents?.[0]?.contactNumber || student.guardianContact}</p>
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold border border-current/20 ${statusColors[student.enrollmentStatus] || "bg-gray-500/10 text-gray-500"}`}>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[0.6rem] text-xs font-bold border ${statusColors[student.enrollmentStatus]?.replace("text-", "border-").replace("bg-", "border-") || "border-gray-500/20"} ${statusColors[student.enrollmentStatus] || "bg-gray-500/10 text-gray-500"}`}>
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${statusColors[student.enrollmentStatus]?.replace("bg-", "bg-").replace("/10", "")?.split(" ")[0] || "bg-gray-500"}`} />
                                                     {student.enrollmentStatus}
                                                 </span>
                                             </td>
@@ -316,58 +375,69 @@ export function SectionDetail({ sectionId, gradeId }: SectionDetailProps) {
             {/* Tab: SUBJECTS */}
             {activeTab === "subjects" && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] shadow-sm overflow-hidden">
+                    <div className="bg-card/40 backdrop-blur-sm rounded-[1.5rem] border border-border/50 shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)]">
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))]">Code</th>
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))]">Subject Name</th>
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))]">Units</th>
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))]">Type</th>
-                                        <th className="text-left px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))]">Assigned Teacher</th>
-                                        <th className="text-right px-5 py-3.5 font-semibold text-[hsl(var(--muted-foreground))]">Actions</th>
+                                    <tr className="border-b border-border/50 bg-muted/20">
+                                        <th className="text-left px-6 py-4 font-bold text-muted-foreground w-1/6">Subject Code</th>
+                                        <th className="text-left px-6 py-4 font-bold text-muted-foreground w-2/6">Course Description</th>
+                                        <th className="text-center px-6 py-4 font-bold text-muted-foreground w-1/12">Units</th>
+                                        <th className="text-left px-6 py-4 font-bold text-muted-foreground w-1/6">Component Type</th>
+                                        <th className="text-left px-6 py-4 font-bold text-muted-foreground w-1/4">Assigned Instructor</th>
+                                        <th className="text-right px-6 py-4 font-bold text-muted-foreground">Manage</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {inheritedSubjects.map((subject, i) => (
-                                        <tr key={subject.id} className="border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--muted)/0.3)] transition-colors">
-                                            <td className="px-5 py-3.5 font-mono text-xs font-bold text-[hsl(var(--primary))]">{subject.code}</td>
-                                            <td className="px-5 py-3.5 font-semibold">{subject.name}</td>
-                                            <td className="px-5 py-3.5 text-xs text-[hsl(var(--muted-foreground))]">{subject.units}u</td>
-                                            <td className="px-5 py-3.5">
-                                                <span className="inline-flex px-2 py-0.5 rounded-md bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] text-xs font-bold border border-[hsl(var(--border))]">
+                                    {inheritedSubjects.map((subject) => (
+                                        <tr key={subject.id} className="border-b border-border/30 last:border-0 hover:bg-muted/30 transition-colors group/row">
+                                            <td className="px-6 py-4">
+                                                <span className="font-mono text-sm font-black text-primary bg-primary/10 px-3 py-1.5 rounded-md border border-primary/20">
+                                                    {subject.code}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 font-bold text-foreground text-sm tracking-tight">{subject.name}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border mx-auto font-bold text-sm shadow-sm group-hover/row:border-primary/40 transition-colors">
+                                                    {subject.units}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="inline-flex px-2.5 py-1 rounded-[0.5rem] bg-muted text-foreground text-[10px] font-black tracking-widest uppercase border border-border/80 shadow-sm">
                                                     {subject.subjectType}
                                                 </span>
                                             </td>
-                                            <td className="px-5 py-3.5">
+                                            <td className="px-6 py-4">
                                                 {subject.teacher ? (
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-7 h-7 rounded-full bg-[hsl(var(--primary)/0.1)] flex items-center justify-center shrink-0">
-                                                            <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+                                                        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-inner group-hover/row:scale-105 transition-transform duration-300">
+                                                            <User className="w-4 h-4 text-primary" />
                                                         </div>
                                                         <div>
-                                                            <p className="font-semibold text-xs text-[hsl(var(--foreground))]">{subject.teacher.lastName}, {subject.teacher.firstName}</p>
-                                                            <p className="text-[10px] text-[hsl(var(--muted-foreground))]">{subject.teacher.employeeId}</p>
+                                                            <p className="font-bold text-sm text-foreground">{subject.teacher.lastName}, {subject.teacher.firstName}</p>
+                                                            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">{subject.teacher.employeeId}</p>
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <span className="text-xs text-amber-600 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md">
-                                                        Unassigned
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                                        <span className="text-xs text-amber-600 dark:text-amber-500 font-bold tracking-wide uppercase">
+                                                            Pending Assignment
+                                                        </span>
+                                                    </div>
                                                 )}
                                             </td>
-                                            <td className="px-5 py-3.5 text-right">
+                                            <td className="px-6 py-4 text-right">
                                                 <button
                                                     onClick={() => setAssignTeacherData({
                                                         subjectId: subject.id,
                                                         subjectName: `${subject.code} — ${subject.name}`,
                                                         teacherId: subject.teacherId
                                                     })}
-                                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[hsl(var(--background))] border border-[hsl(var(--border))] hover:bg-[hsl(var(--primary))] hover:text-primary-foreground hover:border-[hsl(var(--primary))] text-xs font-semibold transition-all shadow-sm"
+                                                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${subject.teacher ? 'bg-background hover:bg-muted border border-border hover:border-primary/30 text-foreground' : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_15px_hsl(var(--primary)/0.3)] shadow-[0_0_10px_hsl(var(--primary)/0.2)]'}`}
                                                 >
                                                     <Edit className="w-3.5 h-3.5" />
-                                                    {subject.teacher ? "Change" : "Assign"}
+                                                    {subject.teacher ? "Reassign" : "Assign Staff"}
                                                 </button>
                                             </td>
                                         </tr>

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { ChevronRight, Users, Loader2, AlertCircle, School, Plus } from "lucide-react";
-import { CreateSectionModal } from "@/components/create-section-modal";
+import { ChevronRight, Users, Loader2, AlertCircle, School, Settings } from "lucide-react";
 
 interface Section {
     id: string;
@@ -31,7 +30,6 @@ export function SectionList({ gradeId, onSelectSection }: SectionListProps) {
     const [grade, setGrade] = useState<GradeLevel | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [showCreateSection, setShowCreateSection] = useState(false);
 
     const fetchGrade = () => {
         setLoading(true);
@@ -65,94 +63,110 @@ export function SectionList({ gradeId, onSelectSection }: SectionListProps) {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">{grade.name} Sections</h2>
-                    <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
-                        {grade._count.sections} section{grade._count.sections !== 1 ? "s" : ""} · {grade._count.students} student{grade._count.students !== 1 ? "s" : ""}
+                    <h2 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
+                        {grade.name} Sections
+                        <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-bold border border-primary/20">
+                            {grade._count.sections} Total
+                        </span>
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        Managing {grade._count.students} enrolled student{grade._count.students !== 1 ? "s" : ""} across all sections
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowCreateSection(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition-all shadow-md shadow-teal-600/25"
-                >
-                    <Plus className="w-4 h-4" /> Create Section
-                </button>
             </div>
 
             {/* Sections Grid */}
             {grade.sections.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {grade.sections.map((section) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {grade.sections.map((section, index) => (
                         <div
                             key={section.id}
                             onClick={() => onSelectSection(section.id, section.name)}
-                            className="group cursor-pointer bg-[hsl(var(--card))] rounded-2xl p-5 border border-[hsl(var(--border))] box-shadow-sm hover:box-shadow-md hover:border-[hsl(var(--primary)/0.3)] hover:-translate-y-1 transition-all duration-300"
+                            className="group relative cursor-pointer bg-card rounded-[1.5rem] p-1 border border-border/50 shadow-sm transition-all duration-500 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1.5 overflow-hidden"
+                            style={{ animationDelay: `${index * 50}ms` }}
                         >
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-[hsl(var(--primary)/0.1)] flex items-center justify-center">
-                                    <School className="w-5 h-5 text-[hsl(var(--primary))]" />
-                                </div>
-                                <div className="w-8 h-8 rounded-full bg-[hsl(var(--muted))] flex items-center justify-center group-hover:bg-[hsl(var(--primary)/0.1)] transition-colors">
-                                    <ChevronRight className="w-4 h-4 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] group-hover:translate-x-0.5 transition-all" />
-                                </div>
-                            </div>
-                            <h3 className="font-bold text-lg mb-1 group-hover:text-[hsl(var(--primary))] transition-colors">
-                                {grade.name} — {section.name}
-                            </h3>
-                            <div className="space-y-2 mt-3 text-sm text-[hsl(var(--muted-foreground))]">
-                                <div className="flex items-center justify-between bg-[hsl(var(--muted)/0.5)] px-3 py-1.5 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <Users className="w-4 h-4" />
-                                        <span className="font-medium">Students</span>
-                                    </div>
-                                    <span className="font-bold text-[hsl(var(--foreground))]">{section._count.students} / {section.capacity}</span>
-                                </div>
+                            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                                <div className="px-1 text-xs space-y-1">
-                                    {section.adviser ? (
-                                        <p><span className="opacity-70">Adviser:</span> <span className="font-medium text-[hsl(var(--foreground))]">{section.adviser.firstName} {section.adviser.lastName}</span></p>
-                                    ) : (
-                                        <p className="opacity-50 italic">No adviser assigned</p>
-                                    )}
-                                    {section.room ? (
-                                        <p><span className="opacity-70">Room:</span> <span className="font-medium text-[hsl(var(--foreground))]">{section.room.name}</span></p>
-                                    ) : (
-                                        <p className="opacity-50 italic">No room assigned</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Capacity progress */}
-                            <div className="mt-4 h-1.5 rounded-full bg-[hsl(var(--muted))] overflow-hidden">
+                            {/* Capacity Gradient Bar */}
+                            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-muted/50 z-10">
                                 <div
-                                    className="h-full rounded-full bg-[hsl(var(--primary))] transition-all duration-1000 ease-out"
+                                    className="h-full bg-gradient-to-r from-primary/80 to-primary group-hover:shadow-[0_0_10px_hsl(var(--primary)/0.5)] transition-all duration-1000 ease-out relative"
                                     style={{ width: `${Math.min((section._count.students / section.capacity) * 100, 100)}%` }}
-                                />
+                                >
+                                    <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/30 blur-[2px]" />
+                                </div>
+                            </div>
+
+                            <div className="bg-background/50 backdrop-blur-sm rounded-[1.25rem] p-6 h-full flex flex-col border border-transparent group-hover:border-primary/10 transition-colors pb-8">
+                                <div className="flex items-start justify-between mb-5">
+                                    <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 shadow-inner">
+                                        <School className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-muted/60 flex items-center justify-center group-hover:bg-primary transition-all duration-300">
+                                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary-foreground group-hover:translate-x-0.5 transition-transform" />
+                                    </div>
+                                </div>
+
+                                <h3 className="font-extrabold text-xl mb-1 text-foreground group-hover:text-primary transition-colors tracking-tight line-clamp-1">
+                                    {section.name}
+                                </h3>
+
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{grade.name}</span>
+                                </div>
+
+                                <div className="space-y-3 mt-auto pt-2 border-t border-border/50">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                                            <Users className="w-4 h-4" /> Capacity
+                                        </div>
+                                        <div className="text-sm font-bold">
+                                            <span className="text-foreground">{section._count.students}</span>
+                                            <span className="text-muted-foreground"> / {section.capacity}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                                            <div className="w-4 h-4 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                                                <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                                            </div>
+                                            Adviser
+                                        </div>
+                                        <div className="text-sm font-semibold text-foreground truncate max-w-[120px]" title={section.adviser ? `${section.adviser.firstName} ${section.adviser.lastName}` : "Unassigned"}>
+                                            {section.adviser ? `${section.adviser.lastName}` : <span className="text-muted-foreground/50 italic">None</span>}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                                            <div className="w-4 h-4 rounded-full bg-teal-500/10 flex items-center justify-center">
+                                                <div className="w-2 h-2 rounded-full bg-teal-500" />
+                                            </div>
+                                            Room
+                                        </div>
+                                        <div className="text-sm font-semibold text-foreground truncate max-w-[120px]" title={section.room?.name || "Unassigned"}>
+                                            {section.room ? section.room.name : <span className="text-muted-foreground/50 italic">None</span>}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-16 bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] shadow-sm">
-                    <div className="w-16 h-16 bg-[hsl(var(--primary)/0.05)] rounded-full flex items-center justify-center mx-auto mb-4">
-                        <School className="w-8 h-8 text-[hsl(var(--muted-foreground)/0.5)]" />
+                <div className="text-center py-20 bg-card rounded-[2rem] border border-border border-dashed shadow-sm">
+                    <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-5">
+                        <School className="w-10 h-10 text-muted-foreground/50" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 text-[hsl(var(--foreground))]">No sections found</h3>
-                    <p className="text-[hsl(var(--muted-foreground))] max-w-sm mx-auto">Create sections for this grade level to start enrolling students and assigning classes.</p>
+                    <h3 className="text-2xl font-bold mb-2 text-foreground">No Sections Configured</h3>
+                    <p className="text-muted-foreground font-medium max-w-sm mx-auto mb-6">There are no sections configured for this grade level yet. Manage academic structures in settings.</p>
                 </div>
             )}
-
-            {/* Create Section Modal */}
-            <CreateSectionModal
-                open={showCreateSection}
-                gradeId={gradeId}
-                gradeName={grade.name}
-                onClose={() => setShowCreateSection(false)}
-                onSuccess={() => { setShowCreateSection(false); fetchGrade(); }}
-            />
         </div>
     );
 }
